@@ -206,6 +206,17 @@ interface ChartPoint {
   reverseFlow: number | null
 }
 
+function formatTooltipTimestamp(ms: number): string {
+  const date = new Date(ms)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 function SegmentCard({ group, activeKey, onHover, onRequestChart, cardRef }: SegmentCardProps) {
   const baseSample = group.directions[0] ?? null
   const isGroupActive = group.directions.some(
@@ -891,14 +902,22 @@ export default function App() {
       .sort((a, b) => a.timestamp - b.timestamp)
       .map((entry) => ({
         ...entry,
-        label: new Date(entry.timestamp).toLocaleString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        label: formatTooltipTimestamp(entry.timestamp),
       }))
   }, [chartSegmentId, isChartOpen, samples, rangeStartMs, rangeEndMs])
+
+  const chartDomain: [number, number] | ['auto', 'auto'] = useMemo(() => {
+    if (!isChartOpen || !chartSegmentId || chartData.length === 0) {
+      return ['auto', 'auto']
+    }
+    const start = rangeStartMs ?? chartData[0]?.timestamp ?? null
+    const endCandidate = rangeEndMs != null ? rangeEndMs + SNAPSHOT_WINDOW_MINUTES * 60 * 1000 : chartData[chartData.length - 1]?.timestamp
+    const end = endCandidate ?? null
+    if (start == null || end == null || start >= end) {
+      return ['auto', 'auto']
+    }
+    return [start, end]
+  }, [chartData, chartSegmentId, isChartOpen, rangeStartMs, rangeEndMs])
 
   const hoveredDirectionOverlay = useMemo(() => {
     if (!hoveredSegmentKey) return null
@@ -1201,7 +1220,14 @@ export default function App() {
                       margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
                     >
                       <CartesianGrid strokeDasharray="3 6" stroke="#e2e8f0" />
-                      <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} minTickGap={20} />
+                      <XAxis
+                        type="number"
+                        dataKey="timestamp"
+                        domain={chartDomain}
+                        tick={{ fontSize: 12, fill: '#475569' }}
+                        tickFormatter={(value) => formatTooltipTimestamp(value)}
+                        minTickGap={20}
+                      />
                       <YAxis
                         tick={{ fontSize: 12, fill: '#475569' }}
                         width={60}
@@ -1224,6 +1250,7 @@ export default function App() {
                           }
                           return value ?? 'n/a'
                         }}
+                        labelFormatter={(value) => formatTooltipTimestamp(value as number)}
                       />
                       <RechartsLegend verticalAlign="top" height={28} />
                       <Line
@@ -1254,7 +1281,14 @@ export default function App() {
                       margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
                     >
                       <CartesianGrid strokeDasharray="3 6" stroke="#e2e8f0" />
-                      <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} minTickGap={20} />
+                      <XAxis
+                        type="number"
+                        dataKey="timestamp"
+                        domain={chartDomain}
+                        tick={{ fontSize: 12, fill: '#475569' }}
+                        tickFormatter={(value) => formatTooltipTimestamp(value)}
+                        minTickGap={20}
+                      />
                       <YAxis
                         tick={{ fontSize: 12, fill: '#475569' }}
                         width={70}
@@ -1277,6 +1311,7 @@ export default function App() {
                           }
                           return value ?? 'n/a'
                         }}
+                        labelFormatter={(value) => formatTooltipTimestamp(value as number)}
                       />
                       <RechartsLegend verticalAlign="top" height={28} />
                       <Line
