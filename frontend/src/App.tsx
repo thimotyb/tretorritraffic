@@ -2,6 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { MapContainer, Polyline, TileLayer, Tooltip } from 'react-leaflet'
 import type { LatLngExpression } from 'leaflet'
+import {
+  CartesianGrid,
+  Legend as RechartsLegend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 
@@ -138,15 +148,27 @@ interface SegmentCardProps {
   group: SegmentGroup
   activeKey: string | null
   onHover: (key: string | null) => void
+  onSegmentHover: (segmentId: string | null) => void
 }
 
-function SegmentCard({ group, activeKey, onHover }: SegmentCardProps) {
+interface ChartPoint {
+  timestamp: number
+  label: string
+  forward: number | null
+  reverse: number | null
+}
+
+function SegmentCard({ group, activeKey, onHover, onSegmentHover }: SegmentCardProps) {
   const isGroupActive = group.directions.some(
     (sample) => `${sample.segmentId}-${sample.direction}` === activeKey,
   )
 
   return (
-    <article className={`segment-card${isGroupActive ? ' is-active' : ''}`}>
+    <article
+      className={`segment-card${isGroupActive ? ' is-active' : ''}`}
+      onMouseEnter={() => onSegmentHover(group.segmentId)}
+      onMouseLeave={() => onSegmentHover(null)}
+    >
       <header>
         <div>
           <h3>{group.segmentName}</h3>
@@ -169,10 +191,22 @@ function SegmentCard({ group, activeKey, onHover }: SegmentCardProps) {
               <div
                 className={`direction-row${isActive ? ' is-active' : ''}`}
                 key={segmentKey}
-                onMouseEnter={() => onHover(segmentKey)}
-                onMouseLeave={() => onHover(null)}
-                onFocus={() => onHover(segmentKey)}
-                onBlur={() => onHover(null)}
+                onMouseEnter={() => {
+                  onSegmentHover(group.segmentId)
+                  onHover(segmentKey)
+                }}
+                onMouseLeave={() => {
+                  onHover(null)
+                  onSegmentHover(null)
+                }}
+                onFocus={() => {
+                  onSegmentHover(group.segmentId)
+                  onHover(segmentKey)
+                }}
+                onBlur={() => {
+                  onHover(null)
+                  onSegmentHover(null)
+                }}
                 role="button"
                 tabIndex={0}
                 aria-label={`${group.segmentName} ${sample.direction}`}
@@ -280,6 +314,7 @@ export default function App() {
   const [customStart, setCustomStart] = useState<string>('')
   const [customEnd, setCustomEnd] = useState<string>('')
   const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null)
+  const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null)
 
   const loadSamples = useCallback(async () => {
     setLoadState('loading')
@@ -567,6 +602,10 @@ export default function App() {
     setHoveredSegmentKey(key)
   }, [])
 
+  const handleChartSegmentHover = useCallback((segmentId: string | null) => {
+    setHoveredSegmentId(segmentId)
+  }, [])
+
   const groupedSegments: SegmentGroup[] = useMemo(() => {
     const groups = new Map<string, SegmentGroup>()
     for (const sample of samplesForSnapshot) {
@@ -586,7 +625,51 @@ export default function App() {
 
   useEffect(() => {
     setHoveredSegmentKey(null)
+    setHoveredSegmentId(null)
   }, [snapshotKey])
+
+  const hoveredGroup = useMemo(
+    () => groupedSegments.find((group) => group.segmentId === hoveredSegmentId) ?? null,
+    [groupedSegments, hoveredSegmentId],
+  )
+
+  const chartData: ChartPoint[] = useMemo(() => {
+    if (!hoveredSegmentId) return []
+    const series = new Map<number, { timestamp: number; forward: number | null; reverse: number | null }>()
+
+    for (const sample of samples) {
+      if (sample.segmentId !== hoveredSegmentId) continue
+      const date = new Date(sample.requestedAt)
+      const ms = date.getTime()
+      if (Number.isNaN(ms)) continue
+      if (rangeStartMs != null && ms < rangeStartMs) continue
+      if (rangeEndMs != null && ms > rangeEndMs + SNAPSHOT_WINDOW_MINUTES * 60 * 1000) continue
+
+      let entry = series.get(ms)
+      if (!entry) {
+        entry = { timestamp: ms, forward: null, reverse: null }
+        series.set(ms, entry)
+      }
+
+      if (sample.direction === 'forward') {
+        entry.forward = sample.durationSeconds ?? null
+      } else if (sample.direction === 'reverse') {
+        entry.reverse = sample.durationSeconds ?? null
+      }
+    }
+
+    return Array.from(series.values())
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map((entry) => ({
+        ...entry,
+        label: new Date(entry.timestamp).toLocaleString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      }))
+  }, [hoveredSegmentId, samples, rangeStartMs, rangeEndMs])
 
   return (
     <div className="app-shell">
@@ -793,6 +876,7 @@ export default function App() {
                 group={group}
                 activeKey={hoveredSegmentKey}
                 onHover={handleSegmentHover}
+                onSegmentHover={handleChartSegmentHover}
               />
             ))}
           </div>
@@ -805,6 +889,54 @@ export default function App() {
           {formatSnapshotRange(latestSnapshotKey)}.
         </p>
       </footer>
+
+      {hoveredGroup && chartData.length > 0 && (
+        <div className="chart-panel">
+          <h3>{hoveredGroup.segmentName} — live time history</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 6" stroke="#e2e8f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} minTickGap={20} />
+              <YAxis
+                tick={{ fontSize: 12, fill: '#475569' }}
+                width={50}
+                label={{ value: 'seconds', angle: -90, position: 'insideLeft', fill: '#475569', fontSize: 12 }}
+              />
+              <RechartsTooltip
+                labelStyle={{ fontWeight: 600 }}
+                formatter={(value) => {
+                  if (Array.isArray(value)) {
+                    return value
+                  }
+                  if (typeof value === 'number') {
+                    return `${value}s`
+                  }
+                  return value ?? 'n/a'
+                }}
+              />
+              <RechartsLegend verticalAlign="top" height={28} />
+              <Line
+                type="monotone"
+                dataKey="forward"
+                name="Forward"
+                stroke="#2563eb"
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+              <Line
+                type="monotone"
+                dataKey="reverse"
+                name="Reverse"
+                stroke="#f97316"
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   )
 }

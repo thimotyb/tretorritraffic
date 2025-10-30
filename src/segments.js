@@ -4,14 +4,14 @@ export const streetSegments = [
     name: "Via Don Luigi Sturzo",
     endpoints: [
       { latitude: 45.5199214, longitude: 9.3261225 },
-      { latitude: 45.5185424, longitude: 9.3228744 }
+      { latitude: 45.5184196, longitude: 9.3209463 }
     ]
   },
   {
     id: "via-sant-ambrogio",
     name: "Via Sant'Ambrogio",
     endpoints: [
-      { latitude: 45.516732, longitude: 9.3232577 },
+      { latitude: 45.5185424, longitude: 9.3228744 },
       { latitude: 45.5178105, longitude: 9.3229557 }
     ]
   },
@@ -28,7 +28,7 @@ export const streetSegments = [
     name: "Via Pontida",
     endpoints: [
       { latitude: 45.5178105, longitude: 9.3229557 },
-      { latitude: 45.5179762, longitude: 9.3262213 }
+      { latitude: 45.5179955, longitude: 9.327145 }
     ]
   },
   {
