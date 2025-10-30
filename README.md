@@ -85,6 +85,15 @@ To build a historical dataset, wire `npm run poll` to a scheduler of your choice
 
 Keep at least a few minutes between invocations to respect Google’s QPS and quota limits. If you need higher temporal granularity, consider staggered schedules or multiple API keys under the same billing account.
 
+Helper scripts are available for local runs every 15 minutes:
+
+```bash
+./scripts/start_polling.sh   # launches a background loop (writes logs to data/poller.log)
+./scripts/stop_polling.sh    # stops the loop and removes the PID file
+```
+
+The daemon executes `npm run poll` (which now cascades into `npm run enrich`) and sleeps for 900 seconds between iterations.
+
 ## Output format
 
 Each entry in `data/traffic_samples.jsonl` matches:
