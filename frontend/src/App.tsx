@@ -34,6 +34,7 @@ interface TrafficSample {
   delaySeconds: number | null
   speedReadingIntervals: unknown
   routeLabels: string[] | null
+  weather?: WeatherSnapshot | null
 }
 
 type LoadedState = 'idle' | 'loading' | 'ready' | 'error'
@@ -48,6 +49,14 @@ interface SegmentTrace {
 interface SnapshotGroup {
   key: string
   samples: TrafficSample[]
+}
+
+interface WeatherSnapshot {
+  weatherCode: number | null
+  condition: string | null
+  temperatureC: number | null
+  observedAt: string | null
+  provider?: string | null
 }
 
 const MAP_CENTER: LatLngExpression = [45.5189, 9.3247]
@@ -163,6 +172,14 @@ function SegmentCard({ group, activeKey, onHover, onSegmentHover }: SegmentCardP
   const isGroupActive = group.directions.some(
     (sample) => `${sample.segmentId}-${sample.direction}` === activeKey,
   )
+  const weather = group.directions[0]?.weather ?? null
+
+  const weatherObservedLabel = weather?.observedAt
+    ? new Date(weather.observedAt).toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : null
 
   return (
     <article
@@ -175,6 +192,22 @@ function SegmentCard({ group, activeKey, onHover, onSegmentHover }: SegmentCardP
           <h3>{group.segmentName}</h3>
         </div>
       </header>
+      {weather && (
+        <div className="segment-weather">
+          <span className="segment-weather__icon" role="img" aria-label="Weather">
+            🌦️
+          </span>
+          <div className="segment-weather__details">
+            <span className="segment-weather__condition">
+              {weather.condition ?? 'Weather unavailable'}
+            </span>
+            <span className="segment-weather__meta">
+              {weather.temperatureC != null ? `${weather.temperatureC.toFixed(1)}°C` : '—'}
+              {weatherObservedLabel ? ` · ${weatherObservedLabel}` : ''}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="direction-stats">
         {group.directions
           .slice()

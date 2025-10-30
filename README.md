@@ -57,6 +57,7 @@ The script performs the following for each street in `src/segments.js`:
 - Requests a route in both directions (`forward`, `reverse`) using the Google Routes API.
 - Captures distance, live travel time, static (free-flow) time, and delay.
 - Appends each observation to `data/traffic_samples.jsonl` as a JSON line.
+- Queries the Open-Meteo API once per poll to record the prevailing weather (condition label, weather code, temperature, observation time) and associates the snapshot with every segment sample.
 
 The default configuration monitors the core Tre Torri block plus nearby approaches along Via Don Luigi Sturzo, Via Sant'Ambrogio, Via Don Lorenzo Milani, Via Pontida, Via Filippo Corridoni, Via Don Primo Mazzolari, Via Leonardo da Vinci (full length), Via Milano, Via Melghera, and Via Padre Kolbe.
 

@@ -19,6 +19,11 @@ const FIELD_MASK = [
 
 const DEPARTURE_LEAD_SECONDS = 120;
 const DEFAULT_DELAY_MS = 250;
+const WEATHER_LATITUDE = 45.5189;
+const WEATHER_LONGITUDE = 9.3247;
+const WEATHER_URL =
+  `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LATITUDE}&longitude=${WEATHER_LONGITUDE}` +
+  '&current=temperature_2m,weather_code&timezone=auto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,6 +69,76 @@ function buildRequestBody(origin, destination) {
       seconds: Math.floor(Date.now() / 1000) + DEPARTURE_LEAD_SECONDS
     }
   };
+}
+
+function describeWeatherCode(code) {
+  if (code == null || Number.isNaN(code)) return null;
+  const lookup = {
+    0: "Clear sky",
+    1: "Mainly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Depositing rime fog",
+    51: "Light drizzle",
+    53: "Moderate drizzle",
+    55: "Dense drizzle",
+    56: "Light freezing drizzle",
+    57: "Dense freezing drizzle",
+    61: "Slight rain",
+    63: "Moderate rain",
+    65: "Heavy rain",
+    66: "Light freezing rain",
+    67: "Heavy freezing rain",
+    71: "Slight snowfall",
+    73: "Moderate snowfall",
+    75: "Heavy snowfall",
+    77: "Snow grains",
+    80: "Slight rain showers",
+    81: "Moderate rain showers",
+    82: "Violent rain showers",
+    85: "Slight snow showers",
+    86: "Heavy snow showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with slight hail",
+    99: "Thunderstorm with heavy hail"
+  };
+  return lookup[code] ?? null;
+}
+
+async function fetchWeatherSnapshot() {
+  try {
+    const response = await fetchImpl(WEATHER_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Weather API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const current = data?.current;
+    if (!current) return null;
+
+    const weatherCode = Number(current.weather_code ?? current.weatherCode ?? null);
+    const temperatureC =
+      typeof current.temperature_2m === "number" ? current.temperature_2m : null;
+    const timeValue = current.time ?? null;
+
+    return {
+      weatherCode,
+      condition: describeWeatherCode(weatherCode),
+      temperatureC,
+      observedAt: timeValue ? new Date(timeValue).toISOString() : new Date().toISOString(),
+      provider: "open-meteo"
+    };
+  } catch (error) {
+    console.warn("Failed to fetch weather snapshot:", error?.message ?? error);
+    return null;
+  }
 }
 
 async function fetchTravelTime({ segment, direction }) {
@@ -134,12 +209,16 @@ export async function collectSamples({
   await ensureDataDir();
 
   const samples = [];
+  const weatherSnapshot = await fetchWeatherSnapshot();
 
   for (const segment of streetSegments) {
     for (const direction of ["forward", "reverse"]) {
       try {
         const sample = await fetchTravelTime({ segment, direction });
-        samples.push(sample);
+        samples.push({
+          ...sample,
+          weather: weatherSnapshot
+        });
         if (logProgress) {
           console.log(
             `${segment.name} (${direction}) → duration ${sample.durationSeconds ?? "n/a"}s, delay ${

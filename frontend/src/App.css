@@ -450,6 +450,38 @@
   margin: 0;
 }
 
+.segment-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.segment-weather__icon {
+  font-size: 1.35rem;
+}
+
+.segment-weather__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+  color: #1f2933;
+}
+
+.segment-weather__condition {
+  font-weight: 600;
+}
+
+.segment-weather__meta {
+  color: #475569;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+}
+
 .chart-panel {
   margin: 1.5rem 2rem 2.5rem;
   padding: 1rem 1.5rem 1.25rem;
