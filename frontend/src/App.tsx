@@ -649,7 +649,6 @@ export default function App() {
     return group?.samples ?? []
   }, [snapshotGroupsAsc, snapshotKey])
 
-  const latestSnapshotKey = visibleSnapshotGroupsDesc[0]?.key ?? null
   const sliderMax = Math.max(visibleSnapshotGroupsAsc.length - 1, 0)
 
   const allTraces: SegmentTrace[] = useMemo(() => {
@@ -1147,13 +1146,6 @@ export default function App() {
          </div>
        </section>
       </main>
-
-      <footer className="app-footer">
-        <p>
-          Showing {samplesForSnapshot.length} of {samples.length} samples. Latest snapshot:{' '}
-          {formatSnapshotRange(latestSnapshotKey)}.
-        </p>
-      </footer>
 
       {isChartOpen && chartGroup && (
         <div
