@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import dotenv from "dotenv";
 import { streetSegments } from "./segments.js";
 
@@ -16,6 +16,9 @@ const FIELD_MASK = [
   "routes.travelAdvisory",
   "routes.routeLabels"
 ].join(",");
+
+const DEPARTURE_LEAD_SECONDS = 120;
+const DEFAULT_DELAY_MS = 250;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +61,7 @@ function buildRequestBody(origin, destination) {
     routingPreference: "TRAFFIC_AWARE",
     computeAlternativeRoutes: false,
     departureTime: {
-      seconds: Math.floor(Date.now() / 1000)
+      seconds: Math.floor(Date.now() / 1000) + DEPARTURE_LEAD_SECONDS
     }
   };
 }
@@ -119,36 +122,71 @@ async function appendSamples(samples) {
   await fs.appendFile(DATA_FILE, `${lines.join("\n")}\n`, "utf8");
 }
 
-async function main() {
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function collectSamples({
+  delayMs = DEFAULT_DELAY_MS,
+  logProgress = true,
+  logErrors = true
+} = {}) {
   await ensureDataDir();
 
   const samples = [];
+
   for (const segment of streetSegments) {
     for (const direction of ["forward", "reverse"]) {
       try {
         const sample = await fetchTravelTime({ segment, direction });
         samples.push(sample);
-        console.log(
-          `${segment.name} (${direction}) → duration ${sample.durationSeconds ?? "n/a"}s, delay ${sample.delaySeconds ?? "n/a"}s`
-        );
+        if (logProgress) {
+          console.log(
+            `${segment.name} (${direction}) → duration ${sample.durationSeconds ?? "n/a"}s, delay ${
+              sample.delaySeconds ?? "n/a"
+            }s`
+          );
+        }
       } catch (error) {
-        console.error(`Failed to collect ${segment.id} ${direction}:`, error.message);
+        if (logErrors) {
+          console.error(`Failed to collect ${segment.id} ${direction}:`, error.message);
+        }
       }
 
-      // Small delay to stay friendly with rate limits.
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (delayMs > 0) {
+        await wait(delayMs);
+      }
     }
   }
 
   if (samples.length > 0) {
     await appendSamples(samples);
-    console.log(`Appended ${samples.length} samples to ${path.relative(process.cwd(), DATA_FILE)}`);
-  } else {
+    if (logProgress) {
+      console.log(
+        `Appended ${samples.length} samples to ${path.relative(process.cwd(), DATA_FILE)}`
+      );
+    }
+  } else if (logProgress) {
     console.warn("No samples collected. Nothing written to disk.");
+  }
+
+  return {
+    samples,
+    dataFile: DATA_FILE
+  };
+}
+
+async function main() {
+  try {
+    await collectSamples();
+  } catch (error) {
+    console.error("Fatal error", error);
+    process.exit(1);
   }
 }
 
-main().catch((error) => {
-  console.error("Fatal error", error);
-  process.exit(1);
-});
+const executedDirectly = import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
+
+if (executedDirectly) {
+  main();
+}

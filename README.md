@@ -40,6 +40,11 @@ Collect travel-time snapshots for the Tre Torri block in Cernusco sul Naviglio u
    echo "GOOGLE_MAPS_API_KEY=your-key" >> .env
    ```
 3. (Optional) Customize street segments in `src/segments.js` if you wish to add/remove streets or refine coordinates.
+4. (Optional) Start the lightweight HTTP control server if you want to trigger manual polls from the web UI:
+   ```bash
+   npm run poll:server
+   ```
+   The service listens on `http://localhost:4000/poll` by default (configurable via `POLL_SERVER_PORT`).
 
 ## Running the poller
 
@@ -52,6 +57,8 @@ The script performs the following for each street in `src/segments.js`:
 - Requests a route in both directions (`forward`, `reverse`) using the Google Routes API.
 - Captures distance, live travel time, static (free-flow) time, and delay.
 - Appends each observation to `data/traffic_samples.jsonl` as a JSON line.
+
+The default configuration monitors the core Tre Torri block plus nearby approaches along Via Don Luigi Sturzo, Via Sant'Ambrogio, Via Don Lorenzo Milani, Via Pontida, Via Filippo Corridoni, Via Don Primo Mazzolari, Via Leonardo da Vinci (full length), Via Milano, Via Melghera, and Via Padre Kolbe.
 
 Console output provides quick feedback on durations and delays or reports API errors if encountered.
 
@@ -103,6 +110,34 @@ Downstream processing can load the file with tools like `jq`, Python/pandas (`re
 - **Persist to a database**: replace the JSONL append step with inserts into Postgres, BigQuery, etc., to enable richer analytics.
 - **Integrate with a frontend**: expose a REST API that serves aggregated metrics and feed those into a React map visualization.
 - **Simulations**: use the captured static vs. live durations to calibrate simple delay models and evaluate one-way scenarios (see `AGENTS.md` for suggested workflows).
+
+## Frontend visualisation
+
+A React application lives under `frontend/` to explore the collected dataset on top of an interactive OpenStreetMap basemap.
+
+### Run the UI locally
+
+```bash
+cd frontend
+npm install
+cp .env.example .env  # Optional: customise VITE_POLL_ENDPOINT if needed
+npm run dev
+```
+
+Vite serves the app on <http://localhost:5173/> by default. The UI reads the JSON Lines file from `../data/traffic_samples.jsonl`, colour-codes each street segment by travel-time ratio, and shows per-direction metrics for the chosen snapshot.
+
+- Use the drop-down or the timeline slider (grouped into rolling 5-minute windows) to switch between polling snapshots. All street traces remain on the map, with the currently selected window highlighted according to congestion severity.
+- Adjust the time-range selector to zoom the slider to the last 24/48 hours, last 7 days, the full dataset, or a custom calendar range.
+- If the poll control server is running, the **Run poll now** button will trigger a fresh Google Routes collection (`POST /poll`) and refresh the dataset in-place. Configure the endpoint with `frontend/.env` (`VITE_POLL_ENDPOINT`).
+
+### Build for production
+
+```bash
+cd frontend
+npm run build
+```
+
+The build output is generated in `frontend/dist/`. The Vite configuration copies `data/traffic_samples.jsonl` into the build folder so the static bundle can render without additional wiring. You can host the resulting files behind any static web server.
 
 ## Limitations & considerations
 

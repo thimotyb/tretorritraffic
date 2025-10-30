@@ -43,8 +43,8 @@ export const streetSegments = [
     id: "via-leonardo-da-vinci",
     name: "Via Leonardo da Vinci",
     endpoints: [
-      { latitude: 45.5227546, longitude: 9.3268995 },
-      { latitude: 45.522077, longitude: 9.3269528 }
+      { latitude: 45.5229429, longitude: 9.3268608 },
+      { latitude: 45.5149157, longitude: 9.3274149 }
     ]
   },
   {
@@ -53,6 +53,30 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5169218, longitude: 9.3269703 },
       { latitude: 45.5168306, longitude: 9.3265576 }
+    ]
+  },
+  {
+    id: "via-milano",
+    name: "Via Milano",
+    endpoints: [
+      { latitude: 45.5201874, longitude: 9.3270205 },
+      { latitude: 45.5201311, longitude: 9.3305069 }
+    ]
+  },
+  {
+    id: "via-melghera",
+    name: "Via Melghera",
+    endpoints: [
+      { latitude: 45.5200434, longitude: 9.3195364 },
+      { latitude: 45.5203748, longitude: 9.3181878 }
+    ]
+  },
+  {
+    id: "via-padre-kolbe",
+    name: "Via Padre Kolbe",
+    endpoints: [
+      { latitude: 45.5164186, longitude: 9.3214657 },
+      { latitude: 45.5163517, longitude: 9.3202809 }
     ]
   }
 ];
