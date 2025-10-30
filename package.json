@@ -1,16 +1,20 @@
 {
   "name": "tretorri-traffic",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Traffic data poller for Quartiere Tre Torri",
   "main": "src/poller.js",
   "scripts": {
     "poll": "node src/poller.js && node scripts/enrich_flows.js",
     "poll:server": "node server/index.js",
-    "enrich": "node scripts/enrich_flows.js"
+    "enrich": "node scripts/enrich_flows.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
     "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0"
   }
 }

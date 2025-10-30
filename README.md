@@ -69,6 +69,8 @@ npm run enrich
 
 The script reads `data/traffic_samples.jsonl`, computes the metrics using the BPR travel-time function (α = 0.15, β = 4) and lane-based capacity assumptions from `src/segments.js`, writes an updated JSONL file, and saves a backup at `data/traffic_samples.backup.jsonl`.
 
+> **Reminder**: plan a calibration pass for the BPR α/β coefficients using ground-truth traffic counts collected on selected segments and time ranges so the derived flow estimates reflect local conditions.
+
 The default configuration monitors the core Tre Torri block plus nearby approaches along Via Don Luigi Sturzo, Via Sant'Ambrogio, Via Don Lorenzo Milani, Via Pontida, Via Filippo Corridoni, Via Don Primo Mazzolari, Via Leonardo da Vinci (full length), Via Milano, Via Melghera, and Via Padre Kolbe.
 
 Console output provides quick feedback on durations and delays or reports API errors if encountered.

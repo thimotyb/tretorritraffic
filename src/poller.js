@@ -35,7 +35,7 @@ if (!apiKey) {
   throw new Error("GOOGLE_MAPS_API_KEY missing. Set it in your environment or .env file.");
 }
 
-function parseDurationSeconds(duration) {
+export function parseDurationSeconds(duration) {
   if (!duration) return null;
   const match = duration.match(/([0-9]+)(?:\.([0-9]+))?s/);
   if (!match) return null;
@@ -71,7 +71,7 @@ function buildRequestBody(origin, destination) {
   };
 }
 
-function describeWeatherCode(code) {
+export function describeWeatherCode(code) {
   if (code == null || Number.isNaN(code)) return null;
   const lookup = {
     0: "Clear sky",

@@ -30,7 +30,7 @@ function haversineDistanceMeters(a, b) {
   return R * c;
 }
 
-function computeSegmentLengthMeters(endpoints) {
+export function computeSegmentLengthMeters(endpoints) {
   if (!endpoints || endpoints.length < 2) return null;
   let total = 0;
   for (let i = 0; i < endpoints.length - 1; i += 1) {
@@ -54,7 +54,7 @@ const segmentMetadata = streetSegments.reduce((acc, segment) => {
   });
 }, new Map());
 
-function deriveFlowMetrics(sample) {
+export function deriveFlowMetrics(sample) {
   const meta = segmentMetadata.get(sample.segmentId);
   if (!meta) {
     return {
