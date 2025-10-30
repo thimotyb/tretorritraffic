@@ -77,6 +77,7 @@ const POLL_ENDPOINT = import.meta.env.VITE_POLL_ENDPOINT || 'http://localhost:40
 const SNAPSHOT_WINDOW_MINUTES = 5
 const BPR_ALPHA = 0.15
 const BPR_BETA = 4
+const DATA_URL = `${import.meta.env.BASE_URL}traffic_samples.jsonl`
 
 type TimeWindowPreset =
   | 'LAST_24_HOURS'
@@ -452,7 +453,7 @@ export default function App() {
     setLoadState('loading')
     setError(null)
     try {
-      const response = await fetch('/traffic_samples.jsonl', {
+      const response = await fetch(DATA_URL, {
         cache: 'no-store',
         headers: {
           Pragma: 'no-cache',

@@ -166,6 +166,17 @@ npm run build
 
 The build output is generated in `frontend/dist/`. The Vite configuration copies `data/traffic_samples.jsonl` into the build folder so the static bundle can render without additional wiring. You can host the resulting files behind any static web server.
 
+### Deploy to GitHub Pages
+
+A GitHub Actions workflow is included to publish the frontend automatically:
+
+1. Ensure the `master` branch contains the latest `data/traffic_samples.jsonl` (run `npm run poll` or `npm run enrich` before pushing).
+2. Push to `master`. The workflow defined in `.github/workflows/deploy.yml` builds the frontend and deploys it to GitHub Pages.
+3. In the repository settings, set **Pages → Build and deployment** to “GitHub Actions”.
+4. The site will be available at `https://<your-username>.github.io/tretorritraffic/` once the workflow completes.
+
+The frontend fetches the dataset from the same build artifact, so visitors can explore the latest committed data without running the poller locally.
+
 ## Limitations & considerations
 
 - Google does not expose historical traffic; this collector only records data from the moment you start running it.

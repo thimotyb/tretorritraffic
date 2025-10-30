@@ -7,8 +7,12 @@ import { fileURLToPath } from 'node:url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+const isProduction = process.env.NODE_ENV === 'production'
+const base = isProduction ? '/tretorritraffic/' : '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   plugins: [
     react(),
     viteStaticCopy({
