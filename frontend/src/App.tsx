@@ -881,7 +881,7 @@ export default function App() {
 
   const arrowIcon = useMemo(() => {
     if (!hoveredDirectionOverlay) return null
-    const rotation = hoveredDirectionOverlay.bearing
+    const rotation = ((hoveredDirectionOverlay.bearing - 90) + 360) % 360
     return L.divIcon({
       className: 'direction-arrow-marker',
       html: `<div class="direction-arrow-marker__inner" style="transform: rotate(${rotation}deg)">➤</div>`
