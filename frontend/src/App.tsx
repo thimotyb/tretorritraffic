@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { MapContainer, Polyline, TileLayer, Tooltip } from 'react-leaflet'
-import type { LatLngExpression } from 'leaflet'
+import { MapContainer, Marker, Polyline, TileLayer, Tooltip } from 'react-leaflet'
+import L, { type LatLngExpression } from 'leaflet'
 import {
   CartesianGrid,
   Legend as RechartsLegend,
@@ -160,6 +160,26 @@ function getColorForRatio(ratio: number | null): string {
 function getWeightForRatio(ratio: number | null): number {
   if (ratio == null) return 4
   return Math.min(8, Math.max(3, ratio * 4))
+}
+
+function computeMidpoint(a: Coordinate, b: Coordinate): Coordinate {
+  return {
+    latitude: (a.latitude + b.latitude) / 2,
+    longitude: (a.longitude + b.longitude) / 2,
+  }
+}
+
+function computeBearingDegrees(a: Coordinate, b: Coordinate): number {
+  const rad = Math.PI / 180
+  const lat1 = a.latitude * rad
+  const lat2 = b.latitude * rad
+  const dLon = (b.longitude - a.longitude) * rad
+
+  const y = Math.sin(dLon) * Math.cos(lat2)
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
+  const bearing = Math.atan2(y, x)
+  return ((bearing * 180) / Math.PI + 360) % 360
 }
 
 interface SegmentGroup {
@@ -840,6 +860,34 @@ export default function App() {
       }))
   }, [chartSegmentId, isChartOpen, samples, rangeStartMs, rangeEndMs])
 
+  const hoveredDirectionOverlay = useMemo(() => {
+    if (!hoveredSegmentKey) return null
+    const dashIndex = hoveredSegmentKey.lastIndexOf('-')
+    if (dashIndex === -1) return null
+    const segmentId = hoveredSegmentKey.slice(0, dashIndex)
+    const direction = hoveredSegmentKey.slice(dashIndex + 1)
+    const sample = samplesForSnapshot.find(
+      (item) => item.segmentId === segmentId && item.direction === direction,
+    )
+    if (!sample) return null
+    const forward = direction === 'forward'
+    const start = forward ? sample.origin : sample.destination
+    const end = forward ? sample.destination : sample.origin
+    if (!start || !end) return null
+    const midpoint = computeMidpoint(start, end)
+    const bearing = computeBearingDegrees(start, end)
+    return { midpoint, bearing }
+  }, [hoveredSegmentKey, samplesForSnapshot])
+
+  const arrowIcon = useMemo(() => {
+    if (!hoveredDirectionOverlay) return null
+    const rotation = hoveredDirectionOverlay.bearing
+    return L.divIcon({
+      className: 'direction-arrow-marker',
+      html: `<div class="direction-arrow-marker__inner" style="transform: rotate(${rotation}deg)">➤</div>`
+    })
+  }, [hoveredDirectionOverlay])
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -1009,9 +1057,19 @@ export default function App() {
                     </Tooltip>
                   </Polyline>
                 )
-              })}
-            </MapContainer>
-          </div>
+            })}
+            {hoveredDirectionOverlay && arrowIcon && (
+              <Marker
+                position={[
+                  hoveredDirectionOverlay.midpoint.latitude,
+                  hoveredDirectionOverlay.midpoint.longitude,
+                ]}
+                icon={arrowIcon}
+                interactive={false}
+              />
+            )}
+          </MapContainer>
+        </div>
           <aside className="legend">
             <h2>Legend</h2>
             <ul>

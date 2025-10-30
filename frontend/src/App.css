@@ -646,6 +646,18 @@
   color: #1f2937;
 }
 
+.direction-arrow-marker {
+  border: none !important;
+  background: transparent !important;
+}
+
+.direction-arrow-marker__inner {
+  font-size: 1.8rem;
+  color: #1d4ed8;
+  text-shadow: 0 6px 18px rgba(15, 23, 42, 0.45);
+  transform-origin: center;
+}
+
 .segment-card dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
