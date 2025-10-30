@@ -772,20 +772,36 @@ export default function App() {
   }, [])
 
   const groupedSegments: SegmentGroup[] = useMemo(() => {
-    const groups = new Map<string, SegmentGroup>()
+    const groups = new Map<
+      string,
+      {
+        segmentId: string
+        segmentName: string
+        directions: Map<'forward' | 'reverse', TrafficSample>
+      }
+    >()
     for (const sample of samplesForSnapshot) {
       const existing = groups.get(sample.segmentId)
-      if (existing) {
-        existing.directions.push(sample)
-      } else {
+      if (!existing) {
         groups.set(sample.segmentId, {
           segmentId: sample.segmentId,
           segmentName: sample.segmentName,
-          directions: [sample],
+          directions: new Map<'forward' | 'reverse', TrafficSample>(),
         })
       }
+      const groupEntry = groups.get(sample.segmentId)!
+      const prev = groupEntry.directions.get(sample.direction as 'forward' | 'reverse')
+      if (!prev || new Date(sample.requestedAt) > new Date(prev.requestedAt)) {
+        groupEntry.directions.set(sample.direction as 'forward' | 'reverse', sample)
+      }
     }
-    return Array.from(groups.values()).sort((a, b) => a.segmentName.localeCompare(b.segmentName))
+    return Array.from(groups.values())
+      .map(({ segmentId, segmentName, directions }) => ({
+        segmentId,
+        segmentName,
+        directions: Array.from(directions.values()),
+      }))
+      .sort((a, b) => a.segmentName.localeCompare(b.segmentName))
   }, [samplesForSnapshot])
 
   useEffect(() => {
