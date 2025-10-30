@@ -639,6 +639,13 @@
   border-radius: 0.75rem;
 }
 
+.chart-subtitle {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
 .segment-card dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

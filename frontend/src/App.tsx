@@ -178,8 +178,10 @@ interface SegmentCardProps {
 interface ChartPoint {
   timestamp: number
   label: string
-  forward: number | null
-  reverse: number | null
+  forwardDuration: number | null
+  reverseDuration: number | null
+  forwardFlow: number | null
+  reverseFlow: number | null
 }
 
 function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardProps) {
@@ -785,7 +787,16 @@ export default function App() {
 
   const chartData: ChartPoint[] = useMemo(() => {
     if (!chartSegmentId || !isChartOpen) return []
-    const series = new Map<number, { timestamp: number; forward: number | null; reverse: number | null }>()
+    const series = new Map<
+      number,
+      {
+        timestamp: number
+        forwardDuration: number | null
+        reverseDuration: number | null
+        forwardFlow: number | null
+        reverseFlow: number | null
+      }
+    >()
 
     for (const sample of samples) {
       if (sample.segmentId !== chartSegmentId) continue
@@ -797,14 +808,22 @@ export default function App() {
 
       let entry = series.get(ms)
       if (!entry) {
-        entry = { timestamp: ms, forward: null, reverse: null }
+        entry = {
+          timestamp: ms,
+          forwardDuration: null,
+          reverseDuration: null,
+          forwardFlow: null,
+          reverseFlow: null,
+        }
         series.set(ms, entry)
       }
 
       if (sample.direction === 'forward') {
-        entry.forward = sample.durationSeconds ?? null
+        entry.forwardDuration = sample.durationSeconds ?? null
+        entry.forwardFlow = sample.derivedFlowVph ?? null
       } else if (sample.direction === 'reverse') {
-        entry.reverse = sample.durationSeconds ?? null
+        entry.reverseDuration = sample.durationSeconds ?? null
+        entry.reverseFlow = sample.derivedFlowVph ?? null
       }
     }
 
@@ -1070,54 +1089,113 @@ export default function App() {
             </header>
             <div className="modal-body">
               {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 6" stroke="#e2e8f0" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} minTickGap={20} />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: '#475569' }}
-                      width={60}
-                      label={{
-                        value: 'seconds',
-                        angle: -90,
-                        position: 'insideLeft',
-                        fill: '#475569',
-                        fontSize: 12,
-                      }}
-                    />
-                    <RechartsTooltip
-                      labelStyle={{ fontWeight: 600 }}
-                      formatter={(value) => {
-                        if (Array.isArray(value)) {
-                          return value
-                        }
-                        if (typeof value === 'number') {
-                          return `${value}s`
-                        }
-                        return value ?? 'n/a'
-                      }}
-                    />
-                    <RechartsLegend verticalAlign="top" height={28} />
-                    <Line
-                      type="monotone"
-                      dataKey="forward"
-                      name="Forward"
-                      stroke="#2563eb"
-                      strokeWidth={2.2}
-                      dot={false}
-                      connectNulls
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="reverse"
-                      name="Reverse"
-                      stroke="#f97316"
-                      strokeWidth={2.2}
-                      dot={false}
-                      connectNulls
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <>
+                  <h4 className="chart-subtitle">Travel time</h4>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 6" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} minTickGap={20} />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: '#475569' }}
+                        width={60}
+                        label={{
+                          value: 'seconds',
+                          angle: -90,
+                          position: 'insideLeft',
+                          fill: '#475569',
+                          fontSize: 12,
+                        }}
+                      />
+                      <RechartsTooltip
+                        labelStyle={{ fontWeight: 600 }}
+                        formatter={(value) => {
+                          if (Array.isArray(value)) {
+                            return value
+                          }
+                          if (typeof value === 'number') {
+                            return `${value}s`
+                          }
+                          return value ?? 'n/a'
+                        }}
+                      />
+                      <RechartsLegend verticalAlign="top" height={28} />
+                      <Line
+                        type="monotone"
+                        dataKey="forwardDuration"
+                        name="Forward"
+                        stroke="#2563eb"
+                        strokeWidth={2.2}
+                        dot={false}
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="reverseDuration"
+                        name="Reverse"
+                        stroke="#f97316"
+                        strokeWidth={2.2}
+                        dot={false}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+
+                  <h4 className="chart-subtitle">Estimated flow</h4>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 6" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#475569' }} minTickGap={20} />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: '#475569' }}
+                        width={70}
+                        label={{
+                          value: 'veh/h',
+                          angle: -90,
+                          position: 'insideLeft',
+                          fill: '#475569',
+                          fontSize: 12,
+                        }}
+                      />
+                      <RechartsTooltip
+                        labelStyle={{ fontWeight: 600 }}
+                        formatter={(value) => {
+                          if (Array.isArray(value)) {
+                            return value
+                          }
+                          if (typeof value === 'number') {
+                            return `${Math.round(value)} veh/h`
+                          }
+                          return value ?? 'n/a'
+                        }}
+                      />
+                      <RechartsLegend verticalAlign="top" height={28} />
+                      <Line
+                        type="monotone"
+                        dataKey="forwardFlow"
+                        name="Forward flow"
+                        stroke="#2563eb"
+                        strokeWidth={2.2}
+                        dot={false}
+                        connectNulls
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="reverseFlow"
+                        name="Reverse flow"
+                        stroke="#f97316"
+                        strokeWidth={2.2}
+                        dot={false}
+                        connectNulls
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </>
               ) : (
                 <p className="chart-empty">No samples available for this time range.</p>
               )}
