@@ -870,9 +870,8 @@ export default function App() {
       (item) => item.segmentId === segmentId && item.direction === direction,
     )
     if (!sample) return null
-    const forward = direction === 'forward'
-    const start = forward ? sample.origin : sample.destination
-    const end = forward ? sample.destination : sample.origin
+    const start = sample.origin
+    const end = sample.destination
     if (!start || !end) return null
     const midpoint = computeMidpoint(start, end)
     const bearing = computeBearingDegrees(start, end)
