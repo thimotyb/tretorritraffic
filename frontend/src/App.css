@@ -286,6 +286,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.segment-card:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .segment-card header {
@@ -320,6 +326,82 @@
   letter-spacing: 0.05em;
   font-weight: 600;
   color: #475569;
+}
+
+.segment-card:is(:hover, :focus-visible) {
+  border-color: #bfdbfe;
+}
+
+.segment-card.is-active {
+  border-color: #2563eb;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+  transform: translateY(-1px);
+}
+
+.segment-card.is-active .direction-chip {
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+}
+
+.direction-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.direction-row {
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  transition: border-color 150ms ease, background 150ms ease;
+  cursor: pointer;
+}
+
+.direction-row:is(:hover, :focus-visible) {
+  border-color: #bfdbfe;
+  background: rgba(191, 219, 254, 0.25);
+  outline: none;
+}
+
+.direction-row.is-active {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.direction-label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.direction-chip {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #475569;
+}
+
+.direction-coords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.direction-row dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem 0.75rem;
+  margin: 0;
 }
 
 .segment-card dl {

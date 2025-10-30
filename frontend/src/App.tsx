@@ -128,93 +128,130 @@ function getWeightForRatio(ratio: number | null): number {
   return Math.min(8, Math.max(3, ratio * 4))
 }
 
-interface SegmentCardProps {
-  sample: TrafficSample
+interface SegmentGroup {
+  segmentId: string
+  segmentName: string
+  directions: TrafficSample[]
 }
 
-function SegmentCard({ sample }: SegmentCardProps) {
-  const ratio = getRatio(sample)
-  const deltaSeconds =
-    sample.durationSeconds != null && sample.staticDurationSeconds != null
-      ? sample.durationSeconds - sample.staticDurationSeconds
-      : null
+interface SegmentCardProps {
+  group: SegmentGroup
+  activeKey: string | null
+  onHover: (key: string | null) => void
+}
+
+function SegmentCard({ group, activeKey, onHover }: SegmentCardProps) {
+  const isGroupActive = group.directions.some(
+    (sample) => `${sample.segmentId}-${sample.direction}` === activeKey,
+  )
 
   return (
-    <article className="segment-card">
+    <article className={`segment-card${isGroupActive ? ' is-active' : ''}`}>
       <header>
         <div>
-          <h3>{sample.segmentName}</h3>
-          <p className="direction-path">
-            {formatCoordinate(sample.origin)} <span className="direction-arrow">→</span>{' '}
-            {formatCoordinate(sample.destination)}
-          </p>
+          <h3>{group.segmentName}</h3>
         </div>
-        <span className="direction">{sample.direction}</span>
       </header>
-      <dl>
-        <div>
-          <dt>
-            Live time
-            <span
-              className="info-icon"
-              tabIndex={0}
-              aria-label="Live Time is the current travel time predicted by Google Routes"
-              data-tooltip="Live Time is the current travel time predicted by Google Routes"
-            >
-              i
-            </span>
-          </dt>
-          <dd>{sample.durationSeconds != null ? `${sample.durationSeconds}s` : 'n/a'}</dd>
-        </div>
-        <div>
-          <dt>
-            Free-flow
-            <span
-              className="info-icon"
-              tabIndex={0}
-              aria-label="Free Flow is the estimated duration with no congestion"
-              data-tooltip="Free Flow is the estimated duration with no congestion"
-            >
-              i
-            </span>
-          </dt>
-          <dd>
-            {sample.staticDurationSeconds != null
-              ? `${sample.staticDurationSeconds}s`
-              : 'n/a'}
-          </dd>
-        </div>
-        <div>
-          <dt>
-            Delta
-            <span
-              className="info-icon"
-              tabIndex={0}
-              aria-label="Delta equals Live Time minus Free Flow"
-              data-tooltip="Delta equals Live Time minus Free Flow"
-            >
-              i
-            </span>
-          </dt>
-          <dd>
-            {deltaSeconds != null ? `${deltaSeconds >= 0 ? '+' : ''}${deltaSeconds}s` : 'n/a'}
-          </dd>
-        </div>
-        <div>
-          <dt>
-            Ratio
-            <span
-              className="info-icon"
-              tabIndex={0}
-              aria-label="Ratio divides Live Time by Free Flow to show congestion"
-              data-tooltip="Ratio divides Live Time by Free Flow to show congestion"
-            >
-              i
-            </span>
-          </dt>
-          <dd>{ratio != null ? ratio.toFixed(2) : 'n/a'}</dd>
-        </div>
-      </dl>
+      <div className="direction-stats">
+        {group.directions
+          .slice()
+          .sort((a, b) => a.direction.localeCompare(b.direction))
+          .map((sample) => {
+            const segmentKey = `${sample.segmentId}-${sample.direction}`
+            const ratio = getRatio(sample)
+            const deltaSeconds =
+              sample.durationSeconds != null && sample.staticDurationSeconds != null
+                ? sample.durationSeconds - sample.staticDurationSeconds
+                : null
+            const isActive = activeKey === segmentKey
+
+            return (
+              <div
+                className={`direction-row${isActive ? ' is-active' : ''}`}
+                key={segmentKey}
+                onMouseEnter={() => onHover(segmentKey)}
+                onMouseLeave={() => onHover(null)}
+                onFocus={() => onHover(segmentKey)}
+                onBlur={() => onHover(null)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${group.segmentName} ${sample.direction}`}
+              >
+                <div className="direction-label">
+                  <span className="direction-chip">{sample.direction}</span>
+                  <span className="direction-coords">
+                    {formatCoordinate(sample.origin)} <span className="direction-arrow">→</span>{' '}
+                    {formatCoordinate(sample.destination)}
+                  </span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>
+                      Live
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Live Time is the current travel time predicted by Google Routes"
+                        data-tooltip="Live Time is the current travel time predicted by Google Routes"
+                      >
+                        i
+                      </span>
+                    </dt>
+                    <dd>{sample.durationSeconds != null ? `${sample.durationSeconds}s` : 'n/a'}</dd>
+                  </div>
+                  <div>
+                    <dt>
+                      Free-flow
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Free Flow is the estimated duration with no congestion"
+                        data-tooltip="Free Flow is the estimated duration with no congestion"
+                      >
+                        i
+                      </span>
+                    </dt>
+                    <dd>
+                      {sample.staticDurationSeconds != null
+                        ? `${sample.staticDurationSeconds}s`
+                        : 'n/a'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>
+                      Delta
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Delta equals Live Time minus Free Flow"
+                        data-tooltip="Delta equals Live Time minus Free Flow"
+                      >
+                        i
+                      </span>
+                    </dt>
+                    <dd>
+                      {deltaSeconds != null ? `${deltaSeconds >= 0 ? '+' : ''}${deltaSeconds}s` : 'n/a'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>
+                      Ratio
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Ratio divides Live Time by Free Flow to show congestion"
+                        data-tooltip="Ratio divides Live Time by Free Flow to show congestion"
+                      >
+                        i
+                      </span>
+                    </dt>
+                    <dd>{ratio != null ? ratio.toFixed(2) : 'n/a'}</dd>
+                  </div>
+                </dl>
+              </div>
+            )
+          })}
+      </div>
     </article>
   )
 }
@@ -242,6 +279,7 @@ export default function App() {
   const [timePreset, setTimePreset] = useState<TimeWindowPreset>('LAST_48_HOURS')
   const [customStart, setCustomStart] = useState<string>('')
   const [customEnd, setCustomEnd] = useState<string>('')
+  const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null)
 
   const loadSamples = useCallback(async () => {
     setLoadState('loading')
@@ -525,6 +563,31 @@ export default function App() {
     }
   }, [isPolling, loadSamples])
 
+  const handleSegmentHover = useCallback((key: string | null) => {
+    setHoveredSegmentKey(key)
+  }, [])
+
+  const groupedSegments: SegmentGroup[] = useMemo(() => {
+    const groups = new Map<string, SegmentGroup>()
+    for (const sample of samplesForSnapshot) {
+      const existing = groups.get(sample.segmentId)
+      if (existing) {
+        existing.directions.push(sample)
+      } else {
+        groups.set(sample.segmentId, {
+          segmentId: sample.segmentId,
+          segmentName: sample.segmentName,
+          directions: [sample],
+        })
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => a.segmentName.localeCompare(b.segmentName))
+  }, [samplesForSnapshot])
+
+  useEffect(() => {
+    setHoveredSegmentKey(null)
+  }, [snapshotKey])
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -648,23 +711,29 @@ export default function App() {
                   interactive={false}
                 />
               ))}
-              {samplesForSnapshot.map((sample) => {
-                const ratio = getRatio(sample)
-                const color = getColorForRatio(ratio)
-                const weight = getWeightForRatio(ratio)
-                const positions: LatLngExpression[] = [
-                  [sample.origin.latitude, sample.origin.longitude],
-                  [sample.destination.latitude, sample.destination.longitude],
-                ]
+            {samplesForSnapshot.map((sample) => {
+              const ratio = getRatio(sample)
+              const color = getColorForRatio(ratio)
+              const weight = getWeightForRatio(ratio)
+              const segmentKey = `${sample.segmentId}-${sample.direction}`
+              const isActive = hoveredSegmentKey === segmentKey
+              const positions: LatLngExpression[] = [
+                [sample.origin.latitude, sample.origin.longitude],
+                [sample.destination.latitude, sample.destination.longitude],
+              ]
 
-                return (
-                  <Polyline
-                    key={`${sample.segmentId}-${sample.direction}`}
-                    positions={positions}
-                    pathOptions={{ color, weight }}
-                  >
-                    <Tooltip sticky>
-                      <strong>{sample.segmentName}</strong>
+              return (
+                <Polyline
+                  key={segmentKey}
+                  positions={positions}
+                  pathOptions={{
+                    color: isActive ? '#2563eb' : color,
+                    weight: isActive ? weight + 3 : weight,
+                    opacity: isActive ? 1 : 0.85,
+                  }}
+                >
+                  <Tooltip sticky>
+                    <strong>{sample.segmentName}</strong>
                       <br />
                       Direction: {sample.direction}
                       <br />
@@ -718,12 +787,14 @@ export default function App() {
             {samplesForSnapshot.length === 0 && (
               <p className="empty">No samples available for the selected snapshot.</p>
             )}
-            {samplesForSnapshot
-              .slice()
-              .sort((a, b) => a.segmentName.localeCompare(b.segmentName))
-              .map((sample) => (
-                <SegmentCard key={`${sample.segmentId}-${sample.direction}`} sample={sample} />
-              ))}
+            {groupedSegments.map((group) => (
+              <SegmentCard
+                key={group.segmentId}
+                group={group}
+                activeKey={hoveredSegmentKey}
+                onHover={handleSegmentHover}
+              />
+            ))}
           </div>
         </section>
       </main>
