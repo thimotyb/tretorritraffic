@@ -93,6 +93,13 @@ Helper scripts are available for local runs every 15 minutes:
 ```
 
 The daemon executes `npm run poll` (which now cascades into `npm run enrich`) and sleeps for 900 seconds between iterations.
+You can tail the log to monitor progress:
+
+```bash
+tail -f data/poller.log
+```
+
+If you need to adjust the interval or switch to a system service, use these scripts as references for your own cron/systemd jobs.
 
 ## Output format
 
