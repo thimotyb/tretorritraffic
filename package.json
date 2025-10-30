@@ -5,7 +5,7 @@
   "description": "Traffic data poller for Quartiere Tre Torri",
   "main": "src/poller.js",
   "scripts": {
-    "poll": "node src/poller.js",
+    "poll": "node src/poller.js && node scripts/enrich_flows.js",
     "poll:server": "node server/index.js",
     "enrich": "node scripts/enrich_flows.js"
   },
