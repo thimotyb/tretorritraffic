@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
+import heroImage from './assets/tre-torri-bg.jpeg'
 
 interface Coordinate {
   latitude: number
@@ -674,9 +675,11 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div>
-          <h1>Tre Torri Traffic Monitor</h1>
-          <p>Visualise Google Routes travel times collected by the poller.</p>
+        <div className="title-banner" style={{ backgroundImage: `url(${heroImage})` }}>
+          <div className="title-overlay">
+            <h1>Tre Torri Traffic Monitor</h1>
+            <p>Visualise Google Routes travel times collected by the poller.</p>
+          </div>
         </div>
         <div className="timestamp-picker">
           <div className="time-slider-row">

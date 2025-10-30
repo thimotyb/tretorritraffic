@@ -8,11 +8,52 @@
 .app-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: stretch;
   padding: 1.5rem 2rem 1rem;
   border-bottom: 1px solid #e4e7eb;
   background: #ffffffd9;
   backdrop-filter: blur(4px);
+}
+
+.title-banner {
+  position: relative;
+  flex: 1;
+  margin-right: 1.75rem;
+  min-height: 150px;
+  border-radius: 1rem;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.title-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.35));
+}
+
+.title-overlay {
+  position: relative;
+  z-index: 1;
+  padding: 1.25rem 1.5rem;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.title-overlay h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  letter-spacing: 0.01em;
+}
+
+.title-overlay p {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.85);
 }
 
 .app-header h1 {
