@@ -28,7 +28,8 @@ Responsible for running `npm run poll` to capture travel-time snapshots.
 3. Execute `npm run poll`.
 4. Verify the command reports successful durations for each segment; investigate any `Google Routes API error` messages.
 5. Confirm the log notes a weather snapshot; transient weather failures fall back to null but should be monitored.
-5. Archive the updated JSONL (e.g., upload, commit to data repo, or sync to cloud storage).
+6. Archive the updated JSONL (e.g., upload, commit to data repo, or sync to cloud storage).
+7. For unattended runs, use `./scripts/start_polling.sh [intervalSeconds]` (defaults to 900) and stop with `./scripts/stop_polling.sh`; these wrappers execute `npm run poll` followed by `npm run enrich` each cycle and log to `data/poller.log`.
 
 **Failure recovery**
 - Retry after a short delay if errors reference transient HTTP issues.
@@ -71,7 +72,7 @@ Validates and prepares the collected dataset for analysis.
 2. Check for null durations, unreasonable values, or sudden shifts.
 3. Validate `weather` fields (code, condition, temperature) and flag missing snapshots when the poll succeeded.
 4. Flag suspect records and, if needed, remove or tag them for downstream consumers.
-5. Produce summary statistics per segment/day for dashboards.
+5. Produce summary statistics per segment/day for dashboards, confirming enrichment fields (`lengthMeters`, `capacityVph`, `derivedFlowVph`, `volumeCapacityRatio`, `flowConfidence`) align with expectations.
 
 **Failure recovery**
 - If the dataset is empty for expected intervals, notify Scheduler and Poller agents.
@@ -92,8 +93,9 @@ Builds and maintains the React-based map UI (future milestone).
 **Runbook**
 1. Consume backend API or static JSON snapshots.
 2. Render polylines for each street with congestion color coding.
-3. Provide date/time selectors, weather badges, and chart interactions (modal icon opens time-series using current range).
-4. Coordinate with Simulation Agent for scenario result formats.
+3. Provide date/time selectors, weather badges, and chart interactions (modal icon opens travel-time and flow time-series using current range).
+4. Keep map ↔ panel interactions aligned: clicking a segment should scroll to the matching card, and hovering a direction should show the map arrow overlay.
+5. Coordinate with Simulation Agent for scenario result formats.
 
 **Failure recovery**
 - If data endpoints change, update fetch logic and notify backend maintainers.
