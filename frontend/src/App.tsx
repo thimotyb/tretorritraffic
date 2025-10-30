@@ -840,6 +840,11 @@ export default function App() {
     [groupedSegments, chartSegmentId],
   )
 
+  const segmentsCount = groupedSegments.length
+  const latestSnapshotLabel = visibleSnapshotGroupsDesc[0]
+    ? formatSnapshotRange(visibleSnapshotGroupsDesc[0].key)
+    : 'n/a'
+
   const chartData: ChartPoint[] = useMemo(() => {
     if (!chartSegmentId || !isChartOpen) return []
     const series = new Map<
@@ -1109,6 +1114,10 @@ export default function App() {
         </div>
           <aside className="legend">
             <h2>Legend</h2>
+            <div className="legend-info">
+              <span><strong>Segments:</strong> {segmentsCount}</span>
+              <span><strong>Latest snapshot:</strong> {latestSnapshotLabel}</span>
+            </div>
             <ul>
               <li>
                 <span className="swatch" style={{ background: '#2ecc71' }} />
