@@ -16,6 +16,7 @@ Responsible for running `npm run poll` to capture travel-time snapshots.
 **Inputs**
 - `GOOGLE_MAPS_API_KEY` (env var)
 - `src/segments.js` (street definitions)
+- Open-Meteo public endpoint (no key required; ensure outbound HTTPS is permitted)
 
 **Outputs**
 - Appended entries in `data/traffic_samples.jsonl`
@@ -26,6 +27,7 @@ Responsible for running `npm run poll` to capture travel-time snapshots.
 2. Load API key from the environment.
 3. Execute `npm run poll`.
 4. Verify the command reports successful durations for each segment; investigate any `Google Routes API error` messages.
+5. Confirm the log notes a weather snapshot; transient weather failures fall back to null but should be monitored.
 5. Archive the updated JSONL (e.g., upload, commit to data repo, or sync to cloud storage).
 
 **Failure recovery**
@@ -67,8 +69,9 @@ Validates and prepares the collected dataset for analysis.
 **Runbook**
 1. Load new JSONL entries (pandas, BigQuery, etc.).
 2. Check for null durations, unreasonable values, or sudden shifts.
-3. Flag suspect records and, if needed, remove or tag them for downstream consumers.
-4. Produce summary statistics per segment/day for dashboards.
+3. Validate `weather` fields (code, condition, temperature) and flag missing snapshots when the poll succeeded.
+4. Flag suspect records and, if needed, remove or tag them for downstream consumers.
+5. Produce summary statistics per segment/day for dashboards.
 
 **Failure recovery**
 - If the dataset is empty for expected intervals, notify Scheduler and Poller agents.
@@ -80,6 +83,7 @@ Builds and maintains the React-based map UI (future milestone).
 **Inputs**
 - Aggregated traffic dataset or API endpoint
 - Map styling guidelines
+- Weather metadata bundled with each sample (condition, temperature, observation time)
 
 **Outputs**
 - React components showing historical/simulated traffic on the Tre Torri block
@@ -88,7 +92,7 @@ Builds and maintains the React-based map UI (future milestone).
 **Runbook**
 1. Consume backend API or static JSON snapshots.
 2. Render polylines for each street with congestion color coding.
-3. Provide date/time selectors and scenario toggles.
+3. Provide date/time selectors, weather badges, and chart interactions (modal icon opens time-series using current range).
 4. Coordinate with Simulation Agent for scenario result formats.
 
 **Failure recovery**
