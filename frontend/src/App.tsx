@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { MapContainer, Marker, Polyline, TileLayer, Tooltip } from 'react-leaflet'
 import L, { type LatLngExpression } from 'leaflet'
@@ -194,6 +194,7 @@ interface SegmentCardProps {
   activeKey: string | null
   onHover: (key: string | null) => void
   onRequestChart: (segmentId: string) => void
+  cardRef?: (node: HTMLDivElement | null) => void
 }
 
 interface ChartPoint {
@@ -205,7 +206,7 @@ interface ChartPoint {
   reverseFlow: number | null
 }
 
-function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardProps) {
+function SegmentCard({ group, activeKey, onHover, onRequestChart, cardRef }: SegmentCardProps) {
   const baseSample = group.directions[0] ?? null
   const isGroupActive = group.directions.some(
     (sample) => `${sample.segmentId}-${sample.direction}` === activeKey,
@@ -223,7 +224,11 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardP
     : null
 
   return (
-    <article className={`segment-card${isGroupActive ? ' is-active' : ''}`}>
+    <article
+      className={`segment-card${isGroupActive ? ' is-active' : ''}`}
+      ref={cardRef}
+      tabIndex={-1}
+    >
       <header>
         <div>
           <h3>{group.segmentName}</h3>
@@ -446,6 +451,7 @@ export default function App() {
   const [customEnd, setCustomEnd] = useState<string>('')
   const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null)
   const [chartSegmentId, setChartSegmentId] = useState<string | null>(null)
+  const segmentCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [isChartOpen, setIsChartOpen] = useState(false)
   const [isDocOpen, setIsDocOpen] = useState(false)
 
@@ -745,6 +751,19 @@ export default function App() {
     setChartSegmentId(null)
   }, [])
 
+  const handleMapSegmentClick = useCallback(
+    (segmentId: string, direction: string) => {
+      const key = `${segmentId}-${direction}`
+      setHoveredSegmentKey(key)
+      const node = segmentCardRefs.current[segmentId]
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        node.focus({ preventScroll: true })
+      }
+    },
+    [],
+  )
+
   const handleOpenDoc = useCallback(() => {
     setIsDocOpen(true)
   }, [])
@@ -1040,6 +1059,9 @@ export default function App() {
                     weight: isActive ? weight + 3 : weight,
                     opacity: isActive ? 1 : 0.85,
                   }}
+                  eventHandlers={{
+                    click: () => handleMapSegmentClick(sample.segmentId, sample.direction),
+                  }}
                 >
                   <Tooltip sticky>
                     <strong>{sample.segmentName}</strong>
@@ -1113,10 +1135,17 @@ export default function App() {
                 activeKey={hoveredSegmentKey}
                 onHover={handleSegmentHover}
                 onRequestChart={handleOpenChart}
+                cardRef={(node) => {
+                  if (node) {
+                    segmentCardRefs.current[group.segmentId] = node
+                  } else {
+                    delete segmentCardRefs.current[group.segmentId]
+                  }
+                }}
               />
             ))}
-          </div>
-        </section>
+         </div>
+       </section>
       </main>
 
       <footer className="app-footer">
