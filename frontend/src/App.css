@@ -131,6 +131,7 @@
 .poll-actions {
   align-items: flex-start;
   gap: 0.6rem;
+  display: flex;
 }
 
 .doc-button {
