@@ -342,17 +342,47 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardP
                     <dd>{ratio != null ? ratio.toFixed(2) : 'n/a'}</dd>
                   </div>
                   <div>
-                    <dt>Flow</dt>
+                    <dt>
+                      Flow
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Estimated directional flow from BPR travel-time model"
+                        data-tooltip="Estimated directional flow from BPR travel-time model"
+                      >
+                        i
+                      </span>
+                    </dt>
                     <dd>{flowVph != null ? `${Math.round(flowVph)} veh/h` : 'n/a'}</dd>
                   </div>
                   <div>
-                    <dt>v/c</dt>
+                    <dt>
+                      v/c
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Volume/capacity ratio computed from estimated flow"
+                        data-tooltip="Volume/capacity ratio computed from estimated flow"
+                      >
+                        i
+                      </span>
+                    </dt>
                     <dd>
                       {volumeCapacityRatio != null ? volumeCapacityRatio.toFixed(2) : 'n/a'}
                     </dd>
                   </div>
                   <div>
-                    <dt>Confidence</dt>
+                    <dt>
+                      Confidence
+                      <span
+                        className="info-icon"
+                        tabIndex={0}
+                        aria-label="Heuristic confidence based on data completeness and congestion"
+                        data-tooltip="Heuristic confidence based on data completeness and congestion"
+                      >
+                        i
+                      </span>
+                    </dt>
                     <dd
                       className={`flow-confidence flow-confidence--${normalizedFlowConfidence}`}
                     >
