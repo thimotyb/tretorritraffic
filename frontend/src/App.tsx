@@ -191,8 +191,6 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardP
           <button
             type="button"
             className="segment-chart-button"
-            onMouseEnter={() => onRequestChart(group.segmentId)}
-            onFocus={() => onRequestChart(group.segmentId)}
             onClick={() => onRequestChart(group.segmentId)}
             aria-label={`Show live time chart for ${group.segmentName}`}
             title="Show live time chart"
