@@ -59,6 +59,16 @@ The script performs the following for each street in `src/segments.js`:
 - Appends each observation to `data/traffic_samples.jsonl` as a JSON line.
 - Queries the Open-Meteo API once per poll to record the prevailing weather (condition label, weather code, temperature, observation time) and associates the snapshot with every segment sample.
 
+### Post-processing flow estimates
+
+Use the enrichment script to derive length, free-flow speed, volume/capacity ratio, and directional flow estimates from the raw samples:
+
+```bash
+npm run enrich
+```
+
+The script reads `data/traffic_samples.jsonl`, computes the metrics using the BPR travel-time function (α = 0.15, β = 4) and lane-based capacity assumptions from `src/segments.js`, writes an updated JSONL file, and saves a backup at `data/traffic_samples.backup.jsonl`.
+
 The default configuration monitors the core Tre Torri block plus nearby approaches along Via Don Luigi Sturzo, Via Sant'Ambrogio, Via Don Lorenzo Milani, Via Pontida, Via Filippo Corridoni, Via Don Primo Mazzolari, Via Leonardo da Vinci (full length), Via Milano, Via Melghera, and Via Padre Kolbe.
 
 Console output provides quick feedback on durations and delays or reports API errors if encountered.

@@ -3,9 +3,14 @@ export const streetSegments = [
     id: "via-don-luigi-sturzo",
     name: "Via Don Luigi Sturzo",
     endpoints: [
-      { latitude: 45.5199214, longitude: 9.3261225 },
-      { latitude: 45.5184196, longitude: 9.3209463 }
-    ]
+      { latitude: 45.5185424, longitude: 9.3228744 },
+      { latitude: 45.5201626, longitude: 9.3266063 }
+    ],
+    metadata: {
+      lanes: 2,
+      laneCapacityVph: 900,
+      speedLimitKph: 40
+    }
   },
   {
     id: "via-sant-ambrogio",
@@ -13,7 +18,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5185424, longitude: 9.3228744 },
       { latitude: 45.5178105, longitude: 9.3229557 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 750,
+      speedLimitKph: 30
+    }
   },
   {
     id: "via-don-lorenzo-milani",
@@ -21,7 +31,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5164186, longitude: 9.3214657 },
       { latitude: 45.5178105, longitude: 9.3229557 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 800,
+      speedLimitKph: 30
+    }
   },
   {
     id: "via-pontida",
@@ -29,7 +44,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5178105, longitude: 9.3229557 },
       { latitude: 45.5179955, longitude: 9.327145 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 750,
+      speedLimitKph: 30
+    }
   },
   {
     id: "via-filippo-corridoni",
@@ -37,7 +57,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5199214, longitude: 9.3261225 },
       { latitude: 45.5168092, longitude: 9.326232 }
-    ]
+    ],
+    metadata: {
+      lanes: 2,
+      laneCapacityVph: 950,
+      speedLimitKph: 40
+    }
   },
   {
     id: "via-leonardo-da-vinci",
@@ -45,7 +70,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5229429, longitude: 9.3268608 },
       { latitude: 45.5149157, longitude: 9.3274149 }
-    ]
+    ],
+    metadata: {
+      lanes: 2,
+      laneCapacityVph: 1000,
+      speedLimitKph: 50
+    }
   },
   {
     id: "via-don-primo-mazzolari",
@@ -53,7 +83,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5169218, longitude: 9.3269703 },
       { latitude: 45.5168306, longitude: 9.3265576 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 700,
+      speedLimitKph: 30
+    }
   },
   {
     id: "via-milano",
@@ -61,7 +96,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5201874, longitude: 9.3270205 },
       { latitude: 45.5201311, longitude: 9.3305069 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 800,
+      speedLimitKph: 40
+    }
   },
   {
     id: "via-melghera",
@@ -69,7 +109,12 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5200434, longitude: 9.3195364 },
       { latitude: 45.5203748, longitude: 9.3181878 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 700,
+      speedLimitKph: 30
+    }
   },
   {
     id: "via-padre-kolbe",
@@ -77,6 +122,11 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5164186, longitude: 9.3214657 },
       { latitude: 45.5163517, longitude: 9.3202809 }
-    ]
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 700,
+      speedLimitKph: 30
+    }
   }
 ];

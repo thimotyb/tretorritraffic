@@ -6,7 +6,8 @@
   "main": "src/poller.js",
   "scripts": {
     "poll": "node src/poller.js",
-    "poll:server": "node server/index.js"
+    "poll:server": "node server/index.js",
+    "enrich": "node scripts/enrich_flows.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

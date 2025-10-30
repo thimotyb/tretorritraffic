@@ -133,6 +133,25 @@
   gap: 0.6rem;
 }
 
+.doc-button {
+  border: 1px solid #cbd5e0;
+  background: #ffffff;
+  color: #1d4ed8;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.doc-button:hover,
+.doc-button:focus-visible {
+  background: rgba(59, 130, 246, 0.12);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+  outline: none;
+}
+
 .control-group label {
   font-size: 0.85rem;
   font-weight: 600;
@@ -469,7 +488,7 @@
 
 .direction-row dl {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 0.4rem 0.75rem;
   margin: 0;
 }
@@ -504,6 +523,26 @@
   color: #475569;
   font-size: 0.78rem;
   letter-spacing: 0.01em;
+}
+
+.segment-capacity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.4rem 0;
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.segment-capacity span::before {
+  content: '•';
+  margin-right: 0.35rem;
+  color: #94a3b8;
+}
+
+.segment-capacity span:first-of-type::before {
+  content: '';
+  margin-right: 0;
 }
 
 .modal-overlay {
@@ -566,6 +605,29 @@
   overflow: hidden;
 }
 
+.modal-body p {
+  margin: 0 0 0.8rem;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.modal-body ul,
+.modal-body ol {
+  margin: 0 0 0.8rem 1.25rem;
+  color: #475569;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.modal-body code {
+  display: inline-block;
+  background: #f1f5f9;
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.85rem;
+  color: #1f2937;
+}
+
 .chart-empty {
   margin: 0;
   padding: 1.25rem;
@@ -597,6 +659,26 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: #1f2933;
+}
+
+.flow-confidence {
+  text-transform: capitalize;
+}
+
+.flow-confidence--high {
+  color: #15803d;
+}
+
+.flow-confidence--medium {
+  color: #ca8a04;
+}
+
+.flow-confidence--low {
+  color: #b91c1c;
+}
+
+.flow-confidence--unknown {
+  color: #475569;
 }
 
 .info-icon {

@@ -35,6 +35,18 @@ interface TrafficSample {
   speedReadingIntervals: unknown
   routeLabels: string[] | null
   weather?: WeatherSnapshot | null
+  lengthMeters?: number | null
+  freeFlowSpeedKph?: number | null
+  capacityVph?: number | null
+  volumeCapacityRatio?: number | null
+  derivedFlowVph?: number | null
+  flowConfidence?: string | null
+  flowEstimationModel?: {
+    alpha: number
+    beta: number
+    source?: string
+    notes?: string
+  } | null
 }
 
 type LoadedState = 'idle' | 'loading' | 'ready' | 'error'
@@ -63,6 +75,8 @@ const MAP_CENTER: LatLngExpression = [45.5189, 9.3247]
 const MAP_ZOOM = 16
 const POLL_ENDPOINT = import.meta.env.VITE_POLL_ENDPOINT || 'http://localhost:4000/poll'
 const SNAPSHOT_WINDOW_MINUTES = 5
+const BPR_ALPHA = 0.15
+const BPR_BETA = 4
 
 type TimeWindowPreset =
   | 'LAST_24_HOURS'
@@ -169,10 +183,14 @@ interface ChartPoint {
 }
 
 function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardProps) {
+  const baseSample = group.directions[0] ?? null
   const isGroupActive = group.directions.some(
     (sample) => `${sample.segmentId}-${sample.direction}` === activeKey,
   )
-  const weather = group.directions[0]?.weather ?? null
+  const weather = baseSample?.weather ?? null
+  const lengthMeters = baseSample?.lengthMeters ?? null
+  const capacityVph = baseSample?.capacityVph ?? null
+  const freeFlowSpeedKph = baseSample?.freeFlowSpeedKph ?? null
 
   const weatherObservedLabel = weather?.observedAt
     ? new Date(weather.observedAt).toLocaleTimeString(undefined, {
@@ -215,6 +233,13 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardP
           </div>
         </div>
       )}
+      {(lengthMeters != null || capacityVph != null || freeFlowSpeedKph != null) && (
+        <div className="segment-capacity">
+          {lengthMeters != null && <span>Length {Math.round(lengthMeters)} m</span>}
+          {freeFlowSpeedKph != null && <span>Free-flow {freeFlowSpeedKph.toFixed(1)} km/h</span>}
+          {capacityVph != null && <span>Capacity {Math.round(capacityVph)} veh/h</span>}
+        </div>
+      )}
       <div className="direction-stats">
         {group.directions
           .slice()
@@ -227,6 +252,12 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardP
                 ? sample.durationSeconds - sample.staticDurationSeconds
                 : null
             const isActive = activeKey === segmentKey
+            const flowVph = sample.derivedFlowVph ?? null
+            const volumeCapacityRatio = sample.volumeCapacityRatio ?? null
+            const rawFlowConfidence = sample.flowConfidence ?? null
+            const normalizedFlowConfidence = rawFlowConfidence
+              ? rawFlowConfidence.toLowerCase()
+              : 'unknown'
 
             return (
               <div
@@ -310,6 +341,24 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart }: SegmentCardP
                     </dt>
                     <dd>{ratio != null ? ratio.toFixed(2) : 'n/a'}</dd>
                   </div>
+                  <div>
+                    <dt>Flow</dt>
+                    <dd>{flowVph != null ? `${Math.round(flowVph)} veh/h` : 'n/a'}</dd>
+                  </div>
+                  <div>
+                    <dt>v/c</dt>
+                    <dd>
+                      {volumeCapacityRatio != null ? volumeCapacityRatio.toFixed(2) : 'n/a'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Confidence</dt>
+                    <dd
+                      className={`flow-confidence flow-confidence--${normalizedFlowConfidence}`}
+                    >
+                      {rawFlowConfidence ?? 'n/a'}
+                    </dd>
+                  </div>
                 </dl>
               </div>
             )
@@ -345,6 +394,7 @@ export default function App() {
   const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null)
   const [chartSegmentId, setChartSegmentId] = useState<string | null>(null)
   const [isChartOpen, setIsChartOpen] = useState(false)
+  const [isDocOpen, setIsDocOpen] = useState(false)
 
   const loadSamples = useCallback(async () => {
     setLoadState('loading')
@@ -642,6 +692,14 @@ export default function App() {
     setChartSegmentId(null)
   }, [])
 
+  const handleOpenDoc = useCallback(() => {
+    setIsDocOpen(true)
+  }, [])
+
+  const handleCloseDoc = useCallback(() => {
+    setIsDocOpen(false)
+  }, [])
+
   const groupedSegments: SegmentGroup[] = useMemo(() => {
     const groups = new Map<string, SegmentGroup>()
     for (const sample of samplesForSnapshot) {
@@ -661,21 +719,37 @@ export default function App() {
 
   useEffect(() => {
     setHoveredSegmentKey(null)
+    setIsChartOpen(false)
+    setChartSegmentId(null)
   }, [snapshotKey])
 
   useEffect(() => {
     if (!isChartOpen) return
     const handler = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsChartOpen(false)
+        handleCloseChart()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isChartOpen])
+  }, [isChartOpen, handleCloseChart])
+
+  useEffect(() => {
+    if (!isDocOpen) return
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDocOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isDocOpen])
 
   const chartGroup = useMemo(
-    () => (chartSegmentId ? groupedSegments.find((group) => group.segmentId === chartSegmentId) ?? null : null),
+    () =>
+      chartSegmentId
+        ? groupedSegments.find((group) => group.segmentId === chartSegmentId) ?? null
+        : null,
     [groupedSegments, chartSegmentId],
   )
 
@@ -819,6 +893,13 @@ export default function App() {
                 {pollStatus.message}
               </p>
             )}
+            <button
+              type="button"
+              className="doc-button"
+              onClick={handleOpenDoc}
+            >
+              Flow estimation guide
+            </button>
           </div>
         </div>
       </header>
@@ -1010,6 +1091,72 @@ export default function App() {
               ) : (
                 <p className="chart-empty">No samples available for this time range.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDocOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Flow estimation guide"
+        >
+          <div className="modal">
+            <header className="modal-header">
+              <h3>Flow estimation guide</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={handleCloseDoc}
+                aria-label="Close guide"
+              >
+                ×
+              </button>
+            </header>
+            <div className="modal-body">
+              <p>
+                We infer directional vehicle flow using the Bureau of Public Roads (BPR) travel-time
+                function:
+              </p>
+              <p>
+                <code>t = t₀ × (1 + α (v/c)^β)</code>
+              </p>
+              <ul>
+                <li>
+                  <strong>t</strong> is the observed travel time, <strong>t₀</strong> is the free-flow time,
+                  <strong>v</strong> is flow (veh/h), and <strong>c</strong> is capacity (veh/h).
+                </li>
+                <li>
+                  We assume α = {BPR_ALPHA} and β = {BPR_BETA}, solve for <strong>v/c</strong>, and multiply by
+                  the segment capacity.
+                </li>
+                <li>
+                  Capacity defaults to <code>lanes × laneCapacityVph</code>; lane capacity comes from
+                  `segments.js` (e.g., 900 veh/h for local lanes).
+                </li>
+                <li>
+                  Length and free-flow speed use the geodesic distance between segment endpoints and the
+                  static (baseline) travel time reported by Google.
+                </li>
+              </ul>
+              <p>Confidence scores:</p>
+              <ul>
+                <li>
+                  <strong>High</strong> — ratios ≤ 0.8 and complete data
+                </li>
+                <li>
+                  <strong>Medium</strong> — ratios between 0.8 and 1.2
+                </li>
+                <li>
+                  <strong>Low</strong> — missing data or heavy congestion (v/c &gt; 1.2)
+                </li>
+              </ul>
+              <p>
+                Re-run <code>npm run enrich</code> after updating raw samples or segment metadata to refresh
+                these derived metrics.
+              </p>
             </div>
           </div>
         </div>
