@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { MapContainer, Marker, Polyline, TileLayer, Tooltip } from 'react-leaflet'
-import L, { type LatLngExpression } from 'leaflet'
+import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import L, { type LatLngExpression, type LeafletMouseEvent } from 'leaflet'
 import {
   CartesianGrid,
   Legend as RechartsLegend,
@@ -206,6 +206,39 @@ interface ChartPoint {
   reverseBaseline: number | null
   forwardFlow: number | null
   reverseFlow: number | null
+}
+
+function MapCursorTracker({
+  onMove,
+  onLeave,
+}: {
+  onMove: (coordinate: Coordinate) => void
+  onLeave: () => void
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    const handleMove = (event: LeafletMouseEvent) => {
+      onMove({ latitude: event.latlng.lat, longitude: event.latlng.lng })
+    }
+
+    const handleOut = (event: LeafletMouseEvent) => {
+      const related = (event.originalEvent as MouseEvent | undefined)?.relatedTarget
+      if (!related || !(related instanceof Element) || !related.closest('.leaflet-container')) {
+        onLeave()
+      }
+    }
+
+    map.on('mousemove', handleMove)
+    map.on('mouseout', handleOut)
+
+    return () => {
+      map.off('mousemove', handleMove)
+      map.off('mouseout', handleOut)
+    }
+  }, [map, onMove, onLeave])
+
+  return null
 }
 
 function formatTooltipTimestamp(ms: number): string {
@@ -471,6 +504,15 @@ export default function App() {
   const playbackIntervalRef = useRef<number | null>(null)
   const [chartRangeStartMs, setChartRangeStartMs] = useState<number | null>(null)
   const [chartRangeEndMs, setChartRangeEndMs] = useState<number | null>(null)
+  const [mapCursorCoordinate, setMapCursorCoordinate] = useState<Coordinate | null>(null)
+
+  const handleMapCursorMove = useCallback((coordinate: Coordinate) => {
+    setMapCursorCoordinate(coordinate)
+  }, [])
+
+  const handleMapCursorLeave = useCallback(() => {
+    setMapCursorCoordinate(null)
+  }, [])
 
   const loadSamples = useCallback(async () => {
     setLoadState('loading')
@@ -1282,6 +1324,7 @@ export default function App() {
         <section className="map-section">
           <div className="map-wrapper">
             <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
+              <MapCursorTracker onMove={handleMapCursorMove} onLeave={handleMapCursorLeave} />
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -1347,37 +1390,47 @@ export default function App() {
             )}
           </MapContainer>
         </div>
-          <aside className="legend">
-            <div className="legend-header">
-              <h2>Legend</h2>
-              <div className="legend-info">
-                <span><strong>Segments:</strong> {segmentsCount}</span>
-                <span><strong>Latest snapshot:</strong> {latestSnapshotLabel}</span>
-              </div>
+          <div className="map-meta">
+            <div className="map-coordinates">
+              <span>Cursor</span>
+              <strong>
+                {mapCursorCoordinate
+                  ? formatCoordinate(mapCursorCoordinate)
+                  : 'Move cursor over map'}
+              </strong>
             </div>
-            <ul>
-              <li>
-                <span className="swatch" style={{ background: '#2ecc71' }} />
-                &le; 1.05 × baseline
-              </li>
-              <li>
-                <span className="swatch" style={{ background: '#f1c40f' }} />
-                1.05 – 1.25 ×
-              </li>
-              <li>
-                <span className="swatch" style={{ background: '#e67e22' }} />
-                1.25 – 1.5 ×
-              </li>
-              <li>
-                <span className="swatch" style={{ background: '#e74c3c' }} />
-                &gt; 1.5 ×
-              </li>
-              <li>
-                <span className="swatch" style={{ background: '#95a5a6' }} />
-                Baseline unavailable
-              </li>
-            </ul>
-          </aside>
+            <aside className="legend">
+              <div className="legend-header">
+                <h2>Legend</h2>
+                <div className="legend-info">
+                  <span><strong>Segments:</strong> {segmentsCount}</span>
+                  <span><strong>Latest snapshot:</strong> {latestSnapshotLabel}</span>
+                </div>
+              </div>
+              <ul>
+                <li>
+                  <span className="swatch" style={{ background: '#2ecc71' }} />
+                  &le; 1.05 × baseline
+                </li>
+                <li>
+                  <span className="swatch" style={{ background: '#f1c40f' }} />
+                  1.05 – 1.25 ×
+                </li>
+                <li>
+                  <span className="swatch" style={{ background: '#e67e22' }} />
+                  1.25 – 1.5 ×
+                </li>
+                <li>
+                  <span className="swatch" style={{ background: '#e74c3c' }} />
+                  &gt; 1.5 ×
+                </li>
+                <li>
+                  <span className="swatch" style={{ background: '#95a5a6' }} />
+                  Baseline unavailable
+                </li>
+              </ul>
+            </aside>
+          </div>
         </section>
 
         <section className="details-section">
