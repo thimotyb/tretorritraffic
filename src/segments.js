@@ -87,8 +87,8 @@ export const streetSegments = [
     id: "via-don-primo-mazzolari",
     name: "Via Don Primo Mazzolari",
     endpoints: [
-      { latitude: 45.5169218, longitude: 9.3269703 },
-      { latitude: 45.5168306, longitude: 9.3265576 }
+      { latitude: 45.5168, longitude: 9.3270 },
+      { latitude: 45.5168, longitude: 9.3250 }
     ],
     metadata: {
       lanes: 1,
@@ -115,8 +115,8 @@ export const streetSegments = [
     id: "via-melghera",
     name: "Via Melghera",
     endpoints: [
-      { latitude: 45.5200434, longitude: 9.3195364 },
-      { latitude: 45.5203748, longitude: 9.3181878 }
+      { latitude: 45.5144, longitude: 9.3202 },
+      { latitude: 45.5164, longitude: 9.3201 }
     ],
     metadata: {
       lanes: 1,
@@ -131,6 +131,48 @@ export const streetSegments = [
     endpoints: [
       { latitude: 45.5164186, longitude: 9.3214657 },
       { latitude: 45.5163517, longitude: 9.3202809 }
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 700,
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
+    }
+  },
+  {
+    id: "piazza-ghezzi",
+    name: "Piazza Ghezzi",
+    endpoints: [
+      { latitude: 45.5168, longitude: 9.3249 },
+      { latitude: 45.5178, longitude: 9.3250 }
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 700,
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
+    }
+  },
+  {
+    id: "plesso-scolastico-sud-est",
+    name: "Plesso Scolastico Sud-Est",
+    endpoints: [
+      { latitude: 45.5167, longitude: 9.3248 },
+      { latitude: 45.5151, longitude: 9.3232 }
+    ],
+    metadata: {
+      lanes: 1,
+      laneCapacityVph: 700,
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
+    }
+  },
+  {
+    id: "plesso-scolastico-sud-ovest",
+    name: "Plesso Scolastico Sud-Ovest",
+    endpoints: [
+      { latitude: 45.5152, longitude: 9.3231 },
+      { latitude: 45.5164, longitude: 9.3214 }
     ],
     metadata: {
       lanes: 1,
