@@ -115,8 +115,8 @@ export const streetSegments = [
     id: "via-melghera",
     name: "Via Melghera",
     endpoints: [
-      { latitude: 45.5144, longitude: 9.3202 },
-      { latitude: 45.5164, longitude: 9.3201 }
+      { latitude: 45.5145, longitude: 9.3205 },
+      { latitude: 45.5163, longitude: 9.3203 }
     ],
     metadata: {
       lanes: 1,
