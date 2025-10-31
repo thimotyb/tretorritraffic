@@ -9,7 +9,8 @@ export const streetSegments = [
     metadata: {
       lanes: 2,
       laneCapacityVph: 900,
-      speedLimitKph: 40
+      speedLimitKph: 40,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -22,7 +23,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 750,
-      speedLimitKph: 30
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -35,7 +37,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 800,
-      speedLimitKph: 30
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -48,7 +51,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 750,
-      speedLimitKph: 30
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -61,7 +65,8 @@ export const streetSegments = [
     metadata: {
       lanes: 2,
       laneCapacityVph: 950,
-      speedLimitKph: 40
+      speedLimitKph: 40,
+      allowedDirections: ["forward"]
     }
   },
   {
@@ -74,7 +79,8 @@ export const streetSegments = [
     metadata: {
       lanes: 2,
       laneCapacityVph: 1000,
-      speedLimitKph: 50
+      speedLimitKph: 50,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -87,7 +93,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 700,
-      speedLimitKph: 30
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -100,7 +107,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 800,
-      speedLimitKph: 40
+      speedLimitKph: 40,
+      allowedDirections: ["reverse"]
     }
   },
   {
@@ -113,7 +121,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 700,
-      speedLimitKph: 30
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
     }
   },
   {
@@ -126,7 +135,8 @@ export const streetSegments = [
     metadata: {
       lanes: 1,
       laneCapacityVph: 700,
-      speedLimitKph: 30
+      speedLimitKph: 30,
+      allowedDirections: ["forward", "reverse"]
     }
   }
 ];

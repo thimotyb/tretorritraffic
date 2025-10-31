@@ -212,12 +212,21 @@ export async function collectSamples({
   const weatherSnapshot = await fetchWeatherSnapshot();
 
   for (const segment of streetSegments) {
-    for (const direction of ["forward", "reverse"]) {
+    const allowedDirections = segment?.metadata?.allowedDirections ?? ["forward", "reverse"];
+    if (!Array.isArray(allowedDirections) || allowedDirections.length === 0) {
+      if (logErrors) {
+        console.warn(`No allowed directions configured for segment ${segment.id}. Skipping.`);
+      }
+      continue;
+    }
+
+    for (const direction of allowedDirections) {
       try {
         const sample = await fetchTravelTime({ segment, direction });
         samples.push({
           ...sample,
-          weather: weatherSnapshot
+          weather: weatherSnapshot,
+          allowedDirections: [...allowedDirections]
         });
         if (logProgress) {
           console.log(

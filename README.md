@@ -39,7 +39,7 @@ Collect travel-time snapshots for the Tre Torri block in Cernusco sul Naviglio u
    cp .env.example .env
    echo "GOOGLE_MAPS_API_KEY=your-key" >> .env
    ```
-3. (Optional) Customize street segments in `src/segments.js` if you wish to add/remove streets or refine coordinates.
+3. (Optional) Customize street segments in `src/segments.js` if you wish to add/remove streets or refine coordinates. Use `metadata.allowedDirections` to control whether a segment is polled in the `forward`, `reverse`, or both directions—only the listed directions are requested, while previously collected data for inactive directions remain in the JSONL history.
 4. (Optional) Start the lightweight HTTP control server if you want to trigger manual polls from the web UI:
    ```bash
    npm run poll:server

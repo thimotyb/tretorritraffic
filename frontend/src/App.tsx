@@ -41,6 +41,7 @@ interface TrafficSample {
   volumeCapacityRatio?: number | null
   derivedFlowVph?: number | null
   flowConfidence?: string | null
+  allowedDirections?: Array<'forward' | 'reverse'> | null
   flowEstimationModel?: {
     alpha: number
     beta: number
@@ -79,6 +80,11 @@ const BPR_ALPHA = 0.15
 const BPR_BETA = 4
 const DATA_URL = `${import.meta.env.BASE_URL}traffic_samples.jsonl`
 
+const CONFIG_ALLOWED_DIRECTION_OVERRIDES: Record<string, Array<'forward' | 'reverse'>> = {
+  'via-milano': ['reverse'],
+  'via-filippo-corridoni': ['forward'],
+}
+
 type TimeWindowPreset =
   | 'LAST_24_HOURS'
   | 'LAST_48_HOURS'
@@ -93,6 +99,7 @@ const TIME_WINDOW_OPTIONS: { value: TimeWindowPreset; label: string }[] = [
   { value: 'FULL_RANGE', label: 'Full dataset' },
   { value: 'CUSTOM', label: 'Custom range…' },
 ]
+
 
 function parseJsonl(text: string): TrafficSample[] {
   return text
@@ -187,6 +194,7 @@ interface SegmentGroup {
   segmentId: string
   segmentName: string
   directions: TrafficSample[]
+  allowedDirections: Array<'forward' | 'reverse'>
 }
 
 interface SegmentCardProps {
@@ -253,14 +261,39 @@ function formatTooltipTimestamp(ms: number): string {
 }
 
 function SegmentCard({ group, activeKey, onHover, onRequestChart, cardRef }: SegmentCardProps) {
-  const baseSample = group.directions[0] ?? null
-  const isGroupActive = group.directions.some(
+  const allowedDirections = group.allowedDirections && group.allowedDirections.length > 0
+    ? (group.allowedDirections as Array<'forward' | 'reverse'>)
+    : (CONFIG_ALLOWED_DIRECTION_OVERRIDES[group.segmentId] as Array<'forward' | 'reverse'> | undefined) ??
+      (['forward', 'reverse'] as Array<'forward' | 'reverse'>)
+  const allowedSet = new Set(allowedDirections)
+  const visibleDirections = group.directions
+    .slice()
+    .filter((sample) => allowedSet.has(sample.direction as 'forward' | 'reverse'))
+    .sort((a, b) => a.direction.localeCompare(b.direction))
+  const baseSample = visibleDirections[0] ?? null
+  const isGroupActive = visibleDirections.some(
     (sample) => `${sample.segmentId}-${sample.direction}` === activeKey,
   )
   const weather = baseSample?.weather ?? null
   const lengthMeters = baseSample?.lengthMeters ?? null
   const capacityVph = baseSample?.capacityVph ?? null
   const freeFlowSpeedKph = baseSample?.freeFlowSpeedKph ?? null
+  const isOneWay = allowedDirections.length === 1
+  const oneWayDirection = isOneWay ? allowedDirections[0] : null
+  let oneWayLabel: string | null = null
+  if (isOneWay && oneWayDirection) {
+    if (oneWayDirection === 'forward' && baseSample) {
+      oneWayLabel = `Forward only (${formatCoordinate(baseSample.origin)} → ${formatCoordinate(
+        baseSample.destination,
+      )})`
+    } else if (oneWayDirection === 'reverse' && baseSample) {
+      oneWayLabel = `Reverse only (${formatCoordinate(baseSample.destination)} ← ${formatCoordinate(
+        baseSample.origin,
+      )})`
+    } else {
+      oneWayLabel = oneWayDirection === 'forward' ? 'Forward only' : 'Reverse only'
+    }
+  }
 
   const weatherObservedLabel = weather?.observedAt
     ? new Date(weather.observedAt).toLocaleTimeString(undefined, {
@@ -278,6 +311,11 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart, cardRef }: Seg
       <header>
         <div>
           <h3>{group.segmentName}</h3>
+          {isOneWay && oneWayLabel && (
+            <span className="segment-oneway" aria-label={`One-way: ${oneWayLabel}`}>
+              🚦 {oneWayLabel}
+            </span>
+          )}
         </div>
         <div className="segment-card-actions">
           <button
@@ -315,10 +353,7 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart, cardRef }: Seg
         </div>
       )}
       <div className="direction-stats">
-        {group.directions
-          .slice()
-          .sort((a, b) => a.direction.localeCompare(b.direction))
-          .map((sample) => {
+        {visibleDirections.map((sample) => {
             const segmentKey = `${sample.segmentId}-${sample.direction}`
             const ratio = getRatio(sample)
             const deltaSeconds =
@@ -466,7 +501,10 @@ function SegmentCard({ group, activeKey, onHover, onRequestChart, cardRef }: Seg
                 </dl>
               </div>
             )
-          })}
+        })}
+        {visibleDirections.length === 0 && (
+          <p className="segment-no-data">No active directions for this segment.</p>
+        )}
       </div>
     </article>
   )
@@ -505,6 +543,32 @@ export default function App() {
   const [chartRangeStartMs, setChartRangeStartMs] = useState<number | null>(null)
   const [chartRangeEndMs, setChartRangeEndMs] = useState<number | null>(null)
   const [mapCursorCoordinate, setMapCursorCoordinate] = useState<Coordinate | null>(null)
+
+  const latestAllowedDirections = useMemo(() => {
+    const map = new Map<string, { directions: Array<'forward' | 'reverse'>; timestamp: number }>()
+    for (const sample of samples) {
+      if (!Array.isArray(sample.allowedDirections) || sample.allowedDirections.length === 0) {
+        continue
+      }
+      const normalized = sample.allowedDirections.filter(
+        (dir): dir is 'forward' | 'reverse' => dir === 'forward' || dir === 'reverse',
+      )
+      if (normalized.length === 0) continue
+      const requestedAt = new Date(sample.requestedAt).getTime()
+      const existing = map.get(sample.segmentId)
+      if (!existing || requestedAt > existing.timestamp) {
+        map.set(sample.segmentId, { directions: normalized, timestamp: requestedAt })
+      }
+    }
+    for (const [segmentId, directions] of Object.entries(CONFIG_ALLOWED_DIRECTION_OVERRIDES)) {
+      if (!map.has(segmentId)) {
+        map.set(segmentId, { directions, timestamp: Number.NEGATIVE_INFINITY })
+      }
+    }
+    return new Map<string, Array<'forward' | 'reverse'>>(
+      Array.from(map.entries(), ([segmentId, value]) => [segmentId, value.directions]),
+    )
+  }, [samples])
 
   const handleMapCursorMove = useCallback((coordinate: Coordinate) => {
     setMapCursorCoordinate(coordinate)
@@ -902,31 +966,55 @@ export default function App() {
         segmentId: string
         segmentName: string
         directions: Map<'forward' | 'reverse', TrafficSample>
+        allowedDirections: Array<'forward' | 'reverse'>
       }
     >()
     for (const sample of samplesForSnapshot) {
+      const overrideAllowed = CONFIG_ALLOWED_DIRECTION_OVERRIDES[sample.segmentId]
+      const sampleAllowed =
+        Array.isArray(sample.allowedDirections) && sample.allowedDirections.length > 0
+          ? (sample.allowedDirections as Array<'forward' | 'reverse'>)
+          : undefined
+      const fallbackLatest = latestAllowedDirections.get(sample.segmentId) as
+        | Array<'forward' | 'reverse'>
+        | undefined
+
       const existing = groups.get(sample.segmentId)
       if (!existing) {
+        const initialAllowed =
+          overrideAllowed ?? sampleAllowed ?? fallbackLatest ?? (['forward', 'reverse'] as Array<'forward' | 'reverse'>)
+
         groups.set(sample.segmentId, {
           segmentId: sample.segmentId,
           segmentName: sample.segmentName,
           directions: new Map<'forward' | 'reverse', TrafficSample>(),
+          allowedDirections: initialAllowed,
         })
       }
       const groupEntry = groups.get(sample.segmentId)!
+      if (overrideAllowed && overrideAllowed.join('|') !== groupEntry.allowedDirections.join('|')) {
+        groupEntry.allowedDirections = overrideAllowed
+      } else if (
+        !overrideAllowed &&
+        sampleAllowed &&
+        sampleAllowed.join('|') !== groupEntry.allowedDirections.join('|')
+      ) {
+        groupEntry.allowedDirections = sampleAllowed
+      }
       const prev = groupEntry.directions.get(sample.direction as 'forward' | 'reverse')
       if (!prev || new Date(sample.requestedAt) > new Date(prev.requestedAt)) {
         groupEntry.directions.set(sample.direction as 'forward' | 'reverse', sample)
       }
     }
     return Array.from(groups.values())
-      .map(({ segmentId, segmentName, directions }) => ({
+      .map(({ segmentId, segmentName, directions, allowedDirections }) => ({
         segmentId,
         segmentName,
         directions: Array.from(directions.values()),
+        allowedDirections,
       }))
       .sort((a, b) => a.segmentName.localeCompare(b.segmentName))
-  }, [samplesForSnapshot])
+  }, [samplesForSnapshot, latestAllowedDirections])
 
   useEffect(() => {
     setHoveredSegmentKey(null)
@@ -983,15 +1071,29 @@ export default function App() {
 
       let forwardSample: TrafficSample | undefined
       let reverseSample: TrafficSample | undefined
+      let allowedDirections: Array<'forward' | 'reverse'> | null = null
 
       for (const sample of group.samples) {
         if (sample.segmentId !== chartSegmentId) continue
+        if (allowedDirections == null && Array.isArray(sample.allowedDirections)) {
+          allowedDirections = sample.allowedDirections.filter((dir): dir is 'forward' | 'reverse' =>
+            dir === 'forward' || dir === 'reverse'
+          )
+        }
         if (sample.direction === 'forward') {
           forwardSample = sample
         } else if (sample.direction === 'reverse') {
           reverseSample = sample
         }
       }
+
+      const fallbackAllowed =
+        (latestAllowedDirections.get(chartSegmentId) as Array<'forward' | 'reverse'> | undefined) ??
+        (CONFIG_ALLOWED_DIRECTION_OVERRIDES[chartSegmentId] as Array<'forward' | 'reverse'> | undefined) ??
+        (['forward', 'reverse'] as Array<'forward' | 'reverse'>)
+      const effectiveAllowed =
+        allowedDirections && allowedDirections.length > 0 ? allowedDirections : fallbackAllowed
+      const allowedSet = new Set<'forward' | 'reverse'>(effectiveAllowed)
 
       if (!forwardSample && !reverseSample) {
         continue
@@ -1000,12 +1102,12 @@ export default function App() {
       points.push({
         timestamp: bucketMs,
         label: formatTooltipTimestamp(bucketMs),
-        forwardDuration: forwardSample?.durationSeconds ?? null,
-        reverseDuration: reverseSample?.durationSeconds ?? null,
-        forwardBaseline: forwardSample?.staticDurationSeconds ?? null,
-        reverseBaseline: reverseSample?.staticDurationSeconds ?? null,
-        forwardFlow: forwardSample?.derivedFlowVph ?? null,
-        reverseFlow: reverseSample?.derivedFlowVph ?? null,
+        forwardDuration: allowedSet.has('forward') ? forwardSample?.durationSeconds ?? null : null,
+        reverseDuration: allowedSet.has('reverse') ? reverseSample?.durationSeconds ?? null : null,
+        forwardBaseline: allowedSet.has('forward') ? forwardSample?.staticDurationSeconds ?? null : null,
+        reverseBaseline: allowedSet.has('reverse') ? reverseSample?.staticDurationSeconds ?? null : null,
+        forwardFlow: allowedSet.has('forward') ? forwardSample?.derivedFlowVph ?? null : null,
+        reverseFlow: allowedSet.has('reverse') ? reverseSample?.derivedFlowVph ?? null : null,
       })
     }
 
@@ -1016,7 +1118,7 @@ export default function App() {
     }
 
     return sorted
-  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, rangeStartMs, rangeEndMs])
+  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, rangeStartMs, rangeEndMs, latestAllowedDirections])
 
   useEffect(() => {
     if (!isChartOpen) {
@@ -1347,6 +1449,16 @@ export default function App() {
                 [sample.origin.latitude, sample.origin.longitude],
                 [sample.destination.latitude, sample.destination.longitude],
               ]
+              const overrideAllowed = CONFIG_ALLOWED_DIRECTION_OVERRIDES[sample.segmentId]
+              const allowedDirectionsSample =
+                overrideAllowed ??
+                (Array.isArray(sample.allowedDirections) && sample.allowedDirections.length > 0
+                  ? sample.allowedDirections
+                  : ['forward', 'reverse'])
+              if (!allowedDirectionsSample.includes(sample.direction as 'forward' | 'reverse')) {
+                return null
+              }
+              const isOneWaySample = allowedDirectionsSample.length === 1
 
               return (
                 <Polyline
@@ -1374,6 +1486,12 @@ export default function App() {
                       {sample.staticDurationSeconds != null ? `${sample.staticDurationSeconds}s` : 'n/a'}
                       <br />
                       Ratio: {getRatio(sample)?.toFixed(2) ?? 'n/a'}
+                      {isOneWaySample && (
+                        <>
+                          <br />
+                          One-way · {allowedDirectionsSample[0] === 'forward' ? 'Forward only' : 'Reverse only'}
+                        </>
+                      )}
                     </Tooltip>
                   </Polyline>
                 )
