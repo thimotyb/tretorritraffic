@@ -74,7 +74,6 @@ interface WeatherSnapshot {
 
 const MAP_CENTER: LatLngExpression = [45.5189, 9.3247]
 const MAP_ZOOM = 16
-const POLL_ENDPOINT = import.meta.env.VITE_POLL_ENDPOINT || 'http://localhost:4000/poll'
 const SNAPSHOT_WINDOW_MINUTES = 5
 const BPR_ALPHA = 0.15
 const BPR_BETA = 4
@@ -527,10 +526,7 @@ export default function App() {
   const [snapshotKey, setSnapshotKey] = useState<string | null>(null)
   const [loadState, setLoadState] = useState<LoadedState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [isPolling, setIsPolling] = useState(false)
-  const [pollStatus, setPollStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(
-    null,
-  )
+  const [pollStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [timePreset, setTimePreset] = useState<TimeWindowPreset>('LAST_48_HOURS')
   const [customStart, setCustomStart] = useState<string>('')
   const [customEnd, setCustomEnd] = useState<string>('')
@@ -544,6 +540,7 @@ export default function App() {
   const [chartRangeStartMs, setChartRangeStartMs] = useState<number | null>(null)
   const [chartRangeEndMs, setChartRangeEndMs] = useState<number | null>(null)
   const [mapCursorCoordinate, setMapCursorCoordinate] = useState<Coordinate | null>(null)
+  const [guideLanguage, setGuideLanguage] = useState<'en' | 'it'>('en')
 
   const latestAllowedDirections = useMemo(() => {
     const map = new Map<string, { directions: Array<'forward' | 'reverse'>; timestamp: number }>()
@@ -891,39 +888,6 @@ export default function App() {
     }
     setIsPlaybackActive((prev) => !prev)
   }, [visibleSnapshotGroupsAsc, loadState])
-
-  const handleRunPoll = useCallback(async () => {
-    if (isPolling) return
-    setIsPolling(true)
-    setPollStatus(null)
-    try {
-      const response = await fetch(POLL_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
-      })
-      if (!response.ok) {
-        const message = await response.text()
-        throw new Error(message || `Poll request failed with ${response.status}`)
-      }
-      const result = await response.json().catch(() => ({ count: undefined }))
-      const count = typeof result.count === 'number' ? result.count : null
-      setPollStatus({
-        type: 'success',
-        message: count != null ? `Poll complete: ${count} samples appended.` : 'Poll complete.',
-      })
-      await loadSamples()
-    } catch (err) {
-      let message = err instanceof Error ? err.message : 'Unknown error triggering poll'
-      if (err instanceof TypeError) {
-        message =
-          'Unable to reach the poll endpoint. Ensure the poll control server is running (npm run poll:server).' 
-      }
-      setPollStatus({ type: 'error', message })
-    } finally {
-      setIsPolling(false)
-    }
-  }, [isPolling, loadSamples])
 
   const handleSegmentHover = useCallback((key: string | null) => {
     setHoveredSegmentKey(key)
@@ -1300,8 +1264,18 @@ export default function App() {
       <header className="app-header">
         <div className="title-banner" style={{ backgroundImage: `url(${heroImage})` }}>
           <div className="title-overlay">
-            <h1>Tre Torri Traffic Monitor</h1>
-            <p>Visualise Google Routes travel times collected by the poller.</p>
+            <div className="title-heading">
+              <h1>Tre Torri Traffic Monitor</h1>
+              <button
+                type="button"
+                className="doc-button doc-button--icon"
+                onClick={handleOpenDoc}
+                aria-label="Flow estimation guide"
+                title="Flow estimation guide"
+              >
+                ?
+              </button>
+            </div>
           </div>
         </div>
         <div className="timestamp-picker">
@@ -1395,28 +1369,13 @@ export default function App() {
               ))}
             </select>
           </div>
-          <div className="control-group poll-actions">
-            <button
-              type="button"
-              className="poll-button"
-              onClick={handleRunPoll}
-              disabled={isPolling || loadState === 'loading'}
-            >
-              {isPolling ? 'Running poll…' : 'Run poll now'}
-            </button>
-            {pollStatus && (
-              <p className={`poll-status ${pollStatus.type === 'error' ? 'error' : 'success'}`}>
+          {pollStatus && (
+            <div className="poll-status-strip">
+              <span className={`poll-status ${pollStatus.type === 'error' ? 'error' : 'success'}`}>
                 {pollStatus.message}
-              </p>
-            )}
-            <button
-              type="button"
-              className="doc-button"
-              onClick={handleOpenDoc}
-            >
-              Flow estimation guide
-            </button>
-          </div>
+              </span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -1787,7 +1746,6 @@ export default function App() {
           </div>
         </div>
       )}
-
       {isDocOpen && (
         <div
           className="modal-overlay"
@@ -1797,7 +1755,7 @@ export default function App() {
         >
           <div className="modal">
             <header className="modal-header">
-              <h3>Flow estimation guide</h3>
+              <h3>Usage & assumptions</h3>
               <button
                 type="button"
                 className="modal-close"
@@ -1808,56 +1766,198 @@ export default function App() {
               </button>
             </header>
             <div className="modal-body">
-              <p>
-                We infer directional vehicle flow using the Bureau of Public Roads (BPR) travel-time
-                function:
-              </p>
-              <p>
-                <code>t = t₀ × (1 + α (v/c)^β)</code>
-              </p>
-              <ul>
-                <li>
-                  <strong>t</strong> is the observed travel time, <strong>t₀</strong> is the free-flow time,
-                  <strong>v</strong> is flow (veh/h), and <strong>c</strong> is capacity (veh/h).
-                </li>
-                <li>
-                  We assume α = {BPR_ALPHA} and β = {BPR_BETA}, solve for <strong>v/c</strong>, and multiply by
-                  the segment capacity.
-                </li>
-                <li>
-                  <strong>Calibration pending:</strong> these α/β defaults have not yet been tuned with the
-                  2023 manual traffic counts. Once those observations are released we will recalibrate the
-                  model against the measured flows.
-                </li>
-                <li>
-                  Capacity defaults to <code>lanes × laneCapacityVph</code>; lane capacity comes from
-                  `segments.js` (e.g., 900 veh/h for local lanes).
-                </li>
-                <li>
-                  Length and free-flow speed use the geodesic distance between segment endpoints and the
-                  static (baseline) travel time reported by Google.
-                </li>
-              </ul>
-              <p>Confidence scores:</p>
-              <ul>
-                <li>
-                  <strong>High</strong> — ratios ≤ 0.8 and complete data
-                </li>
-                <li>
-                  <strong>Medium</strong> — ratios between 0.8 and 1.2
-                </li>
-                <li>
-                  <strong>Low</strong> — missing data or heavy congestion (v/c &gt; 1.2)
-                </li>
-              </ul>
-              <p>
-                Re-run <code>npm run enrich</code> after updating raw samples or segment metadata to refresh
-                these derived metrics.
-              </p>
+              <div className="guide-language">
+                <button
+                  type="button"
+                  className={`guide-language__button${guideLanguage === 'en' ? ' is-active' : ''}`}
+                  onClick={() => setGuideLanguage('en')}
+                  aria-label="English guide"
+                >
+                  🇬🇧
+                </button>
+                <button
+                  type="button"
+                  className={`guide-language__button${guideLanguage === 'it' ? ' is-active' : ''}`}
+                  onClick={() => setGuideLanguage('it')}
+                  aria-label="Guida in italiano"
+                >
+                  🇮🇹
+                </button>
+              </div>
+
+              {guideLanguage === 'en' ? (
+                <div className="guide-content">
+                  <h4>Why this dashboard?</h4>
+                  <p>
+                    Tre Torri is evaluating circulation changes, especially converting selected streets to
+                    one-way operation. This tool lets us monitor observed Google Routes travel times so we
+                    can compare baseline behaviour with future scenarios.
+                  </p>
+
+                  <h4>How to explore the data</h4>
+                  <ul>
+                    <li>Use the range presets or slider to move through snapshots (5-minute buckets).</li>
+                    <li>
+                      Hover segments on the map or list to reveal live/free-flow durations, direction, and
+                      whether the street is currently one-way.
+                    </li>
+                    <li>
+                      Open the chart (📈) to see time-series of travel time, free-flow baselines, and flow
+                      estimates for the active segment.
+                    </li>
+                    <li>
+                      Click a road on the map to jump to its card in the right-hand panel and highlight the
+                      corresponding direction.
+                    </li>
+                    <li>
+                      Cursor coordinates appear beside the legend — copy them when defining new segments.
+                    </li>
+                  </ul>
+
+                  <h4>Flow estimation model</h4>
+                  <p>
+                    We infer directional flow using the Bureau of Public Roads (BPR) travel-time function:
+                  </p>
+                  <p>
+                    <code>t = t₀ × (1 + α (v/c)^β)</code>
+                  </p>
+                  <ul>
+                    <li>
+                      <strong>t</strong> is the observed travel time, <strong>t₀</strong> is the free-flow time,
+                      <strong>v</strong> is flow (veh/h), and <strong>c</strong> is capacity (veh/h).
+                    </li>
+                    <li>
+                      We assume α = {BPR_ALPHA} and β = {BPR_BETA}, solve for <strong>v/c</strong>, and multiply by
+                      the segment capacity.
+                    </li>
+                    <li>
+                      <strong>Calibration pending:</strong> these α/β defaults have not yet been tuned with the
+                      2023 manual traffic counts. Once those observations are released we will recalibrate the
+                      model against the measured flows.
+                    </li>
+                    <li>
+                      Capacity defaults to <code>lanes × laneCapacityVph</code>; lane capacity comes from
+                      `segments.js` (e.g., 900 veh/h for local lanes).
+                    </li>
+                    <li>
+                      Length and free-flow speed use the geodesic distance between segment endpoints and the
+                      static (baseline) travel time reported by Google.
+                    </li>
+                  </ul>
+                  <p>Confidence scores:</p>
+                  <ul>
+                    <li>
+                      <strong>High</strong> — ratios ≤ 0.8 and complete data
+                    </li>
+                    <li>
+                      <strong>Medium</strong> — ratios between 0.8 and 1.2
+                    </li>
+                    <li>
+                      <strong>Low</strong> — missing data or heavy congestion (v/c &gt; 1.2)
+                    </li>
+                  </ul>
+                  <p>
+                    Re-run <code>npm run enrich</code> after updating raw samples or segment metadata to refresh
+                    these derived metrics.
+                  </p>
+                  <footer className="guide-footer">
+                    <p>
+                      Sources: Google Maps Routes API (live traffic, static baselines).
+                      <br />
+                      Ing. Thimoty Barbieri – <a href="mailto:thimoty.barbieri@gmail.com">thimoty.barbieri@gmail.com</a>
+                    </p>
+                  </footer>
+                </div>
+              ) : (
+                <div className="guide-content">
+                  <h4>Perché questo cruscotto?</h4>
+                  <p>
+                    Il quartiere Tre Torri sta valutando modifiche alla circolazione, in particolare la
+                    trasformazione di alcune strade in sensi unici. Questo strumento consente di monitorare i
+                    tempi di percorrenza osservati su Google Routes per confrontare il comportamento attuale con
+                    gli scenari futuri.
+                  </p>
+
+                  <h4>Come esplorare i dati</h4>
+                  <ul>
+                    <li>Usa i preset oppure lo slider per navigare tra le finestre temporali (blocchi da 5 minuti).</li>
+                    <li>
+                      Passa il mouse sulle strade nella mappa o nell’elenco per vedere durate live/free-flow,
+                      direzione e se il segmento è attualmente a senso unico.
+                    </li>
+                    <li>
+                      Apri il grafico (📈) per consultare le serie storiche dei tempi di viaggio, dei free-flow e
+                      delle stime di flusso per il segmento selezionato.
+                    </li>
+                    <li>
+                      Clicca sulla strada nella mappa per aprire la scheda corrispondente nel pannello a destra e
+                      metterne in evidenza la direzione.
+                    </li>
+                    <li>
+                      Le coordinate del cursore compaiono accanto alla legenda: copiale quando devi definire
+                      nuovi segmenti.
+                    </li>
+                  </ul>
+
+                  <h4>Modello di stima del flusso</h4>
+                  <p>
+                    Stimiamo il flusso direzionale usando la funzione di BPR (Bureau of Public Roads):
+                  </p>
+                  <p>
+                    <code>t = t₀ × (1 + α (v/c)^β)</code>
+                  </p>
+                  <ul>
+                    <li>
+                      <strong>t</strong> è il tempo osservato, <strong>t₀</strong> quello in condizioni libere,
+                      <strong>v</strong> è il flusso (veh/h) e <strong>c</strong> è la capacità (veh/h).
+                    </li>
+                    <li>
+                      Assumiamo α = {BPR_ALPHA} e β = {BPR_BETA}; risolviamo per <strong>v/c</strong> e moltiplichiamo per
+                      la capacità del segmento.
+                    </li>
+                    <li>
+                      <strong>Calibrazione in attesa:</strong> questi valori α/β non sono ancora tarati con i conteggi
+                      manuali 2023. Quando saranno disponibili, ricalibreremo il modello.
+                    </li>
+                    <li>
+                      La capacità deriva da <code>corsie × laneCapacityVph</code>; i valori di riferimento sono in
+                      `segments.js`.
+                    </li>
+                    <li>
+                      Lunghezza e velocità free-flow usano la distanza geodetica tra gli estremi e la durata statica
+                      fornita da Google.
+                    </li>
+                  </ul>
+                  <p>Livelli di confidenza:</p>
+                  <ul>
+                    <li>
+                      <strong>Alta</strong> — rapporto ≤ 0.8 e dati completi
+                    </li>
+                    <li>
+                      <strong>Media</strong> — rapporto tra 0.8 e 1.2
+                    </li>
+                    <li>
+                      <strong>Bassa</strong> — dati mancanti o congestione elevata (v/c &gt; 1.2)
+                    </li>
+                  </ul>
+                  <p>
+                    Esegui <code>npm run enrich</code> dopo aver aggiornato i campioni grezzi o i metadati dei segmenti per
+                    rigenerare queste metriche.
+                  </p>
+                  <footer className="guide-footer">
+                    <p>
+                      Fonti: Google Maps Routes API (traffico live, baseline statiche).
+                      <br />
+                      Ing. Thimoty Barbieri – <a href="mailto:thimoty.barbieri@gmail.com">thimoty.barbieri@gmail.com</a>
+                    </p>
+                  </footer>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
+
     </div>
   )
 }
