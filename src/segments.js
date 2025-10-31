@@ -38,7 +38,7 @@ export const streetSegments = [
       lanes: 1,
       laneCapacityVph: 800,
       speedLimitKph: 30,
-      allowedDirections: ["forward", "reverse"]
+      allowedDirections: ["forward"]
     }
   },
   {

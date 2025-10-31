@@ -83,6 +83,7 @@ const DATA_URL = `${import.meta.env.BASE_URL}traffic_samples.jsonl`
 const CONFIG_ALLOWED_DIRECTION_OVERRIDES: Record<string, Array<'forward' | 'reverse'>> = {
   'via-milano': ['reverse'],
   'via-filippo-corridoni': ['forward'],
+  'via-don-lorenzo-milani': ['forward'],
 }
 
 type TimeWindowPreset =
