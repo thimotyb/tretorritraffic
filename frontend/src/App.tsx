@@ -1574,6 +1574,11 @@ export default function App() {
                   the segment capacity.
                 </li>
                 <li>
+                  <strong>Calibration pending:</strong> these α/β defaults have not yet been tuned with the
+                  2023 manual traffic counts. Once those observations are released we will recalibrate the
+                  model against the measured flows.
+                </li>
+                <li>
                   Capacity defaults to <code>lanes × laneCapacityVph</code>; lane capacity comes from
                   `segments.js` (e.g., 900 veh/h for local lanes).
                 </li>
