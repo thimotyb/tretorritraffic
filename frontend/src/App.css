@@ -715,7 +715,7 @@
 
 .modal-body {
   padding: 1rem 1.25rem 1.5rem;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .modal-body p {
