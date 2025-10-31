@@ -128,6 +128,51 @@
   background: #ffffff;
 }
 
+.chart-range-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.chart-range-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.chart-range-controls input[type='datetime-local'] {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 0.45rem;
+  font-size: 0.85rem;
+  background: #ffffff;
+  min-width: 210px;
+}
+
+.chart-range-reset {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.chart-range-reset:hover,
+.chart-range-reset:focus-visible {
+  background: #1d4ed8;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+  outline: none;
+}
+
 .poll-actions {
   align-items: flex-start;
   gap: 0.6rem;

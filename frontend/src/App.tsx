@@ -465,6 +465,8 @@ export default function App() {
   const segmentCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [isChartOpen, setIsChartOpen] = useState(false)
   const [isDocOpen, setIsDocOpen] = useState(false)
+  const [chartRangeStartMs, setChartRangeStartMs] = useState<number | null>(null)
+  const [chartRangeEndMs, setChartRangeEndMs] = useState<number | null>(null)
 
   const loadSamples = useCallback(async () => {
     setLoadState('loading')
@@ -856,7 +858,7 @@ export default function App() {
     ? formatSnapshotRange(visibleSnapshotGroupsDesc[0].key)
     : 'n/a'
 
-  const chartData: ChartPoint[] = useMemo(() => {
+  const chartBasePoints: ChartPoint[] = useMemo(() => {
     if (!chartSegmentId || !isChartOpen) return []
 
     const points: ChartPoint[] = []
@@ -896,17 +898,50 @@ export default function App() {
 
     const sorted = points.sort((a, b) => a.timestamp - b.timestamp)
 
-    if (sorted.length <= 1) {
-      return sorted
+    if (sorted.length <= 0) {
+      return []
+    }
+
+    return sorted
+  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, rangeStartMs, rangeEndMs])
+
+  useEffect(() => {
+    if (!isChartOpen) {
+      setChartRangeStartMs(null)
+      setChartRangeEndMs(null)
+      return
+    }
+    if (chartBasePoints.length === 0) {
+      setChartRangeStartMs(null)
+      setChartRangeEndMs(null)
+      return
+    }
+    const earliest = chartBasePoints[0]?.timestamp ?? null
+    const latest = chartBasePoints[chartBasePoints.length - 1]?.timestamp ?? null
+    setChartRangeStartMs(earliest)
+    setChartRangeEndMs(latest)
+  }, [isChartOpen, chartSegmentId, chartBasePoints])
+
+  const chartData: ChartPoint[] = useMemo(() => {
+    if (!chartSegmentId || !isChartOpen) return []
+
+    const filtered = chartBasePoints.filter((point) => {
+      if (chartRangeStartMs != null && point.timestamp < chartRangeStartMs) return false
+      if (chartRangeEndMs != null && point.timestamp > chartRangeEndMs) return false
+      return true
+    })
+
+    if (filtered.length <= 1) {
+      return filtered
     }
 
     const gapThresholdMs = SNAPSHOT_WINDOW_MINUTES * 2 * 60 * 1000
     const withBreaks: ChartPoint[] = []
 
-    for (let i = 0; i < sorted.length; i += 1) {
-      const current = sorted[i]
+    for (let i = 0; i < filtered.length; i += 1) {
+      const current = filtered[i]
       withBreaks.push(current)
-      const next = sorted[i + 1]
+      const next = filtered[i + 1]
       if (!next) continue
       const delta = next.timestamp - current.timestamp
       if (delta > gapThresholdMs) {
@@ -923,20 +958,97 @@ export default function App() {
     }
 
     return withBreaks
-  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, rangeStartMs, rangeEndMs])
+  }, [chartSegmentId, isChartOpen, chartBasePoints, chartRangeStartMs, chartRangeEndMs])
 
   const chartDomain: [number, number] | ['auto', 'auto'] = useMemo(() => {
-    if (!isChartOpen || !chartSegmentId || chartData.length === 0) {
+    if (!isChartOpen || !chartSegmentId || chartBasePoints.length === 0) {
       return ['auto', 'auto']
     }
-    const start = rangeStartMs ?? chartData[0]?.timestamp ?? null
-    const endCandidate = rangeEndMs != null ? rangeEndMs + SNAPSHOT_WINDOW_MINUTES * 60 * 1000 : chartData[chartData.length - 1]?.timestamp
-    const end = endCandidate ?? null
+
+    const defaultStart = chartBasePoints[0]?.timestamp ?? null
+    const defaultEnd = chartBasePoints[chartBasePoints.length - 1]?.timestamp ?? null
+    const start = chartRangeStartMs ?? defaultStart
+    const end = chartRangeEndMs ?? defaultEnd
     if (start == null || end == null || start >= end) {
       return ['auto', 'auto']
     }
     return [start, end]
-  }, [chartData, chartSegmentId, isChartOpen, rangeStartMs, rangeEndMs])
+  }, [chartBasePoints, chartSegmentId, isChartOpen, chartRangeStartMs, chartRangeEndMs])
+
+  const chartRangeStartValue = chartRangeStartMs != null
+    ? formatDatetimeLocalInput(new Date(chartRangeStartMs))
+    : ''
+  const chartRangeEndValue = chartRangeEndMs != null
+    ? formatDatetimeLocalInput(new Date(chartRangeEndMs))
+    : ''
+
+  const handleChartRangeStartChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value
+      if (!value) {
+        setChartRangeStartMs(null)
+        return
+      }
+      const parsed = new Date(value)
+      if (Number.isNaN(parsed.getTime())) return
+      const ms = parsed.getTime()
+      const earliest = chartBasePoints[0]?.timestamp ?? null
+      const latest = chartBasePoints[chartBasePoints.length - 1]?.timestamp ?? null
+      let nextStart = ms
+      if (earliest != null && nextStart < earliest) {
+        nextStart = earliest
+      }
+      if (latest != null && nextStart > latest) {
+        nextStart = latest
+      }
+      setChartRangeStartMs(nextStart)
+      setChartRangeEndMs((prev) => {
+        if (prev != null && prev < nextStart) {
+          return nextStart
+        }
+        return prev
+      })
+    },
+    [chartBasePoints],
+  )
+
+  const handleChartRangeEndChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value
+      if (!value) {
+        setChartRangeEndMs(null)
+        return
+      }
+      const parsed = new Date(value)
+      if (Number.isNaN(parsed.getTime())) return
+      const ms = parsed.getTime()
+      const earliest = chartBasePoints[0]?.timestamp ?? null
+      const latest = chartBasePoints[chartBasePoints.length - 1]?.timestamp ?? null
+      let nextEnd = ms
+      if (earliest != null && nextEnd < earliest) {
+        nextEnd = earliest
+      }
+      if (latest != null && nextEnd > latest) {
+        nextEnd = latest
+      }
+      setChartRangeEndMs(nextEnd)
+      setChartRangeStartMs((prev) => {
+        if (prev != null && prev > nextEnd) {
+          return nextEnd
+        }
+        return prev
+      })
+    },
+    [chartBasePoints],
+  )
+
+  const handleChartRangeReset = useCallback(() => {
+    if (chartBasePoints.length === 0) return
+    const earliest = chartBasePoints[0]?.timestamp ?? null
+    const latest = chartBasePoints[chartBasePoints.length - 1]?.timestamp ?? null
+    setChartRangeStartMs(earliest)
+    setChartRangeEndMs(latest)
+  }, [chartBasePoints])
 
   const hoveredDirectionOverlay = useMemo(() => {
     if (!hoveredSegmentKey) return null
@@ -1234,6 +1346,33 @@ export default function App() {
             <div className="modal-body">
               {chartData.length > 0 ? (
                 <>
+                  <div className="chart-range-controls">
+                    <label htmlFor="chart-range-start">
+                      Start
+                      <input
+                        id="chart-range-start"
+                        type="datetime-local"
+                        value={chartRangeStartValue}
+                        min={chartBasePoints[0] ? formatDatetimeLocalInput(new Date(chartBasePoints[0].timestamp)) : undefined}
+                        max={chartBasePoints.length > 0 ? formatDatetimeLocalInput(new Date(chartBasePoints[chartBasePoints.length - 1].timestamp)) : undefined}
+                        onChange={handleChartRangeStartChange}
+                      />
+                    </label>
+                    <label htmlFor="chart-range-end">
+                      End
+                      <input
+                        id="chart-range-end"
+                        type="datetime-local"
+                        value={chartRangeEndValue}
+                        min={chartBasePoints[0] ? formatDatetimeLocalInput(new Date(chartBasePoints[0].timestamp)) : undefined}
+                        max={chartBasePoints.length > 0 ? formatDatetimeLocalInput(new Date(chartBasePoints[chartBasePoints.length - 1].timestamp)) : undefined}
+                        onChange={handleChartRangeEndChange}
+                      />
+                    </label>
+                    <button type="button" className="chart-range-reset" onClick={handleChartRangeReset}>
+                      Reset
+                    </button>
+                  </div>
                   <h4 className="chart-subtitle">Travel time</h4>
                   <ResponsiveContainer width="100%" height={240}>
                     <LineChart
