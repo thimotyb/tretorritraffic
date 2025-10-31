@@ -470,6 +470,7 @@
   margin-bottom: 0.35rem;
   font-size: 0.78rem;
   color: #475569;
+  align-items: center;
 }
 
 .legend-info span {

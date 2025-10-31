@@ -542,6 +542,18 @@ export default function App() {
   const [mapCursorCoordinate, setMapCursorCoordinate] = useState<Coordinate | null>(null)
   const [guideLanguage, setGuideLanguage] = useState<'en' | 'it'>('en')
 
+  const autogrillIcon = useMemo(
+    () =>
+      L.icon({
+        iconUrl: new URL('./assets/autogrill-logo.svg', import.meta.url).href,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18],
+        className: 'autogrill-icon',
+      }),
+    [],
+  )
+
   const latestAllowedDirections = useMemo(() => {
     const map = new Map<string, { directions: Array<'forward' | 'reverse'>; timestamp: number }>()
     for (const sample of samples) {
@@ -1399,11 +1411,11 @@ export default function App() {
                   interactive={false}
                 />
               ))}
-            {samplesForSnapshot.map((sample) => {
-              const ratio = getRatio(sample)
-              const color = getColorForRatio(ratio)
-              const weight = getWeightForRatio(ratio)
-              const segmentKey = `${sample.segmentId}-${sample.direction}`
+              {samplesForSnapshot.map((sample) => {
+                const ratio = getRatio(sample)
+                const color = getColorForRatio(ratio)
+                const weight = getWeightForRatio(ratio)
+                const segmentKey = `${sample.segmentId}-${sample.direction}`
               const isActive = hoveredSegmentKey === segmentKey
               const positions: LatLngExpression[] = [
                 [sample.origin.latitude, sample.origin.longitude],
@@ -1466,6 +1478,23 @@ export default function App() {
                 interactive={false}
               />
             )}
+            <Polyline
+              positions={[
+                [45.5165, 9.3202],
+                [45.5184, 9.3200],
+                [45.5186, 9.3227],
+              ]}
+              pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '8 6' }}
+            >
+              <Tooltip sticky direction="top" offset={[0, -12]}>
+                Simulazione Bypass Per Leonardo Da Vinci
+              </Tooltip>
+            </Polyline>
+            <Marker position={[45.5188, 9.321]} icon={autogrillIcon}>
+              <Tooltip direction="top" offset={[0, -12]} opacity={1} permanent>
+                Autogrill
+              </Tooltip>
+            </Marker>
           </MapContainer>
         </div>
           <div className="map-meta">
