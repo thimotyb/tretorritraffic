@@ -90,6 +90,41 @@
   align-items: flex-end;
 }
 
+.playback-control {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.35rem;
+}
+
+.playback-button {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 90px;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.playback-button.is-active {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.playback-button:hover,
+.playback-button:focus-visible {
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
+  outline: none;
+}
+
+.playback-button.is-active:hover,
+.playback-button.is-active:focus-visible {
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.2);
+}
+
 .time-range-group {
   flex: 0 0 220px;
 }

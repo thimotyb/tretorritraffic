@@ -467,6 +467,8 @@ export default function App() {
   const segmentCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [isChartOpen, setIsChartOpen] = useState(false)
   const [isDocOpen, setIsDocOpen] = useState(false)
+  const [isPlaybackActive, setIsPlaybackActive] = useState(false)
+  const playbackIntervalRef = useRef<number | null>(null)
   const [chartRangeStartMs, setChartRangeStartMs] = useState<number | null>(null)
   const [chartRangeEndMs, setChartRangeEndMs] = useState<number | null>(null)
 
@@ -639,6 +641,9 @@ export default function App() {
       if (snapshotKey !== null) {
         setSnapshotKey(null)
       }
+      if (isPlaybackActive) {
+        setIsPlaybackActive(false)
+      }
       return
     }
 
@@ -649,7 +654,62 @@ export default function App() {
     if (!exists) {
       setSnapshotKey(visibleSnapshotGroupsDesc[0].key)
     }
-  }, [snapshotKey, visibleSnapshotGroupsAsc, visibleSnapshotGroupsDesc])
+  }, [snapshotKey, visibleSnapshotGroupsAsc, visibleSnapshotGroupsDesc, isPlaybackActive])
+
+  useEffect(() => {
+    if (!isPlaybackActive) {
+      if (playbackIntervalRef.current != null) {
+        window.clearInterval(playbackIntervalRef.current)
+        playbackIntervalRef.current = null
+      }
+      return
+    }
+
+    if (visibleSnapshotGroupsAsc.length === 0) {
+      setIsPlaybackActive(false)
+      return
+    }
+
+    if (!snapshotKey) {
+      setSnapshotKey(visibleSnapshotGroupsAsc[0].key)
+    }
+
+    const intervalId = window.setInterval(() => {
+      setSnapshotKey((currentKey) => {
+        if (visibleSnapshotGroupsAsc.length === 0) {
+          return currentKey
+        }
+        const currentIndex = currentKey
+          ? visibleSnapshotGroupsAsc.findIndex((group) => group.key === currentKey)
+          : -1
+        const nextIndex = currentIndex >= 0
+          ? (currentIndex + 1) % visibleSnapshotGroupsAsc.length
+          : 0
+        return visibleSnapshotGroupsAsc[nextIndex]?.key ?? currentKey
+      })
+    }, 2000)
+
+    playbackIntervalRef.current = intervalId
+
+    return () => {
+      window.clearInterval(intervalId)
+      playbackIntervalRef.current = null
+    }
+  }, [isPlaybackActive, visibleSnapshotGroupsAsc, snapshotKey])
+
+  useEffect(() => {
+    return () => {
+      if (playbackIntervalRef.current != null) {
+        window.clearInterval(playbackIntervalRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (loadState === 'loading' && isPlaybackActive) {
+      setIsPlaybackActive(false)
+    }
+  }, [loadState, isPlaybackActive])
 
   const sliderValue = useMemo(() => {
     if (visibleSnapshotGroupsAsc.length === 0) return 0
@@ -717,6 +777,13 @@ export default function App() {
       setSnapshotKey(nextGroup.key)
     }
   }
+
+  const handleTogglePlayback = useCallback(() => {
+    if (visibleSnapshotGroupsAsc.length === 0 || loadState === 'loading') {
+      return
+    }
+    setIsPlaybackActive((prev) => !prev)
+  }, [visibleSnapshotGroupsAsc, loadState])
 
   const handleRunPoll = useCallback(async () => {
     if (isPolling) return
@@ -1126,6 +1193,18 @@ export default function App() {
                 <span />
                 <span />
               </div>
+            </div>
+            <div className="playback-control">
+              <button
+                type="button"
+                className={`playback-button${isPlaybackActive ? ' is-active' : ''}`}
+                onClick={handleTogglePlayback}
+                disabled={visibleSnapshotGroupsAsc.length === 0 || loadState === 'loading'}
+                aria-label={isPlaybackActive ? 'Stop playback' : 'Play timeline'}
+                title={isPlaybackActive ? 'Stop timeline playback' : 'Play timeline playback'}
+              >
+                {isPlaybackActive ? '⏹ Stop' : '▶ Play'}
+              </button>
             </div>
           </div>
           {timePreset === 'CUSTOM' && (
