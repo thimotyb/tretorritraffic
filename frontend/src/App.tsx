@@ -202,6 +202,8 @@ interface ChartPoint {
   label: string
   forwardDuration: number | null
   reverseDuration: number | null
+  forwardBaseline: number | null
+  reverseBaseline: number | null
   forwardFlow: number | null
   reverseFlow: number | null
 }
@@ -891,6 +893,8 @@ export default function App() {
         label: formatTooltipTimestamp(bucketMs),
         forwardDuration: forwardSample?.durationSeconds ?? null,
         reverseDuration: reverseSample?.durationSeconds ?? null,
+        forwardBaseline: forwardSample?.staticDurationSeconds ?? null,
+        reverseBaseline: reverseSample?.staticDurationSeconds ?? null,
         forwardFlow: forwardSample?.derivedFlowVph ?? null,
         reverseFlow: reverseSample?.derivedFlowVph ?? null,
       })
@@ -951,6 +955,8 @@ export default function App() {
           label: formatTooltipTimestamp(breakpointTs),
           forwardDuration: null,
           reverseDuration: null,
+          forwardBaseline: null,
+          reverseBaseline: null,
           forwardFlow: null,
           reverseFlow: null,
         })
@@ -1334,6 +1340,20 @@ export default function App() {
           <div className="modal">
             <header className="modal-header">
               <h3>{chartGroup.segmentName} — live time history</h3>
+              <div className="chart-help">
+                <span className="chart-help__icon" tabIndex={0} aria-label="How to read this chart">
+                  ?
+                  <span className="chart-help__tooltip">
+                    <strong>Live time</strong> (solid lines) is what drivers face now.
+                    <br />
+                    <strong>Free-flow</strong> (dashed) is Google’s baseline with no traffic. When live time rides well above free-flow the link is congested.
+                    <br />
+                    We track <strong>forward vs reverse</strong> legs separately to spot one-way style behaviour or directional choke points.
+                    <br />
+                    Any gaps? They mean the poller didn’t run then, so we leave the line open instead of faking data.
+                  </span>
+                </span>
+              </div>
               <button
                 type="button"
                 className="modal-close"
@@ -1415,6 +1435,15 @@ export default function App() {
                       <RechartsLegend verticalAlign="top" height={28} />
                       <Line
                         type="monotone"
+                        dataKey="forwardBaseline"
+                        name="Forward free-flow"
+                        stroke="#60a5fa"
+                        strokeWidth={1.5}
+                        strokeDasharray="5 5"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
                         dataKey="forwardDuration"
                         name="Forward"
                         stroke="#2563eb"
@@ -1427,6 +1456,15 @@ export default function App() {
                         name="Reverse"
                         stroke="#f97316"
                         strokeWidth={2.2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="reverseBaseline"
+                        name="Reverse free-flow"
+                        stroke="#fbbf24"
+                        strokeWidth={1.5}
+                        strokeDasharray="5 5"
                         dot={false}
                       />
                     </LineChart>
