@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseDurationSeconds, describeWeatherCode } from '../src/poller.js';
+
+if (!process.env.GOOGLE_MAPS_API_KEY) {
+  process.env.GOOGLE_MAPS_API_KEY = 'test-key';
+}
+
+const { parseDurationSeconds, describeWeatherCode } = await import('../src/poller.js');
 
 describe('parseDurationSeconds', () => {
   it('returns number for whole-second values', () => {

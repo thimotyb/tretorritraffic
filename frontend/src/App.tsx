@@ -858,53 +858,72 @@ export default function App() {
 
   const chartData: ChartPoint[] = useMemo(() => {
     if (!chartSegmentId || !isChartOpen) return []
-    const series = new Map<
-      number,
-      {
-        timestamp: number
-        forwardDuration: number | null
-        reverseDuration: number | null
-        forwardFlow: number | null
-        reverseFlow: number | null
+
+    const points: ChartPoint[] = []
+
+    for (const group of snapshotGroupsAsc) {
+      const bucketTime = new Date(group.key)
+      const bucketMs = bucketTime.getTime()
+      if (Number.isNaN(bucketMs)) continue
+      if (rangeStartMs != null && bucketMs < rangeStartMs) continue
+      if (rangeEndMs != null && bucketMs > rangeEndMs) continue
+
+      let forwardSample: TrafficSample | undefined
+      let reverseSample: TrafficSample | undefined
+
+      for (const sample of group.samples) {
+        if (sample.segmentId !== chartSegmentId) continue
+        if (sample.direction === 'forward') {
+          forwardSample = sample
+        } else if (sample.direction === 'reverse') {
+          reverseSample = sample
+        }
       }
-    >()
 
-    for (const sample of samples) {
-      if (sample.segmentId !== chartSegmentId) continue
-      const date = new Date(sample.requestedAt)
-      const ms = date.getTime()
-      if (Number.isNaN(ms)) continue
-      if (rangeStartMs != null && ms < rangeStartMs) continue
-      if (rangeEndMs != null && ms > rangeEndMs + SNAPSHOT_WINDOW_MINUTES * 60 * 1000) continue
+      if (!forwardSample && !reverseSample) {
+        continue
+      }
 
-      let entry = series.get(ms)
-      if (!entry) {
-        entry = {
-          timestamp: ms,
+      points.push({
+        timestamp: bucketMs,
+        label: formatTooltipTimestamp(bucketMs),
+        forwardDuration: forwardSample?.durationSeconds ?? null,
+        reverseDuration: reverseSample?.durationSeconds ?? null,
+        forwardFlow: forwardSample?.derivedFlowVph ?? null,
+        reverseFlow: reverseSample?.derivedFlowVph ?? null,
+      })
+    }
+
+    const sorted = points.sort((a, b) => a.timestamp - b.timestamp)
+
+    if (sorted.length <= 1) {
+      return sorted
+    }
+
+    const gapThresholdMs = SNAPSHOT_WINDOW_MINUTES * 2 * 60 * 1000
+    const withBreaks: ChartPoint[] = []
+
+    for (let i = 0; i < sorted.length; i += 1) {
+      const current = sorted[i]
+      withBreaks.push(current)
+      const next = sorted[i + 1]
+      if (!next) continue
+      const delta = next.timestamp - current.timestamp
+      if (delta > gapThresholdMs) {
+        const breakpointTs = current.timestamp + Math.floor(delta / 2)
+        withBreaks.push({
+          timestamp: breakpointTs,
+          label: formatTooltipTimestamp(breakpointTs),
           forwardDuration: null,
           reverseDuration: null,
           forwardFlow: null,
           reverseFlow: null,
-        }
-        series.set(ms, entry)
-      }
-
-      if (sample.direction === 'forward') {
-        entry.forwardDuration = sample.durationSeconds ?? null
-        entry.forwardFlow = sample.derivedFlowVph ?? null
-      } else if (sample.direction === 'reverse') {
-        entry.reverseDuration = sample.durationSeconds ?? null
-        entry.reverseFlow = sample.derivedFlowVph ?? null
+        })
       }
     }
 
-    return Array.from(series.values())
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .map((entry) => ({
-        ...entry,
-        label: formatTooltipTimestamp(entry.timestamp),
-      }))
-  }, [chartSegmentId, isChartOpen, samples, rangeStartMs, rangeEndMs])
+    return withBreaks
+  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, rangeStartMs, rangeEndMs])
 
   const chartDomain: [number, number] | ['auto', 'auto'] = useMemo(() => {
     if (!isChartOpen || !chartSegmentId || chartData.length === 0) {
@@ -1132,10 +1151,12 @@ export default function App() {
           </MapContainer>
         </div>
           <aside className="legend">
-            <h2>Legend</h2>
-            <div className="legend-info">
-              <span><strong>Segments:</strong> {segmentsCount}</span>
-              <span><strong>Latest snapshot:</strong> {latestSnapshotLabel}</span>
+            <div className="legend-header">
+              <h2>Legend</h2>
+              <div className="legend-info">
+                <span><strong>Segments:</strong> {segmentsCount}</span>
+                <span><strong>Latest snapshot:</strong> {latestSnapshotLabel}</span>
+              </div>
             </div>
             <ul>
               <li>
@@ -1260,7 +1281,6 @@ export default function App() {
                         stroke="#2563eb"
                         strokeWidth={2.2}
                         dot={false}
-                        connectNulls
                       />
                       <Line
                         type="monotone"
@@ -1269,7 +1289,6 @@ export default function App() {
                         stroke="#f97316"
                         strokeWidth={2.2}
                         dot={false}
-                        connectNulls
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -1321,7 +1340,6 @@ export default function App() {
                         stroke="#2563eb"
                         strokeWidth={2.2}
                         dot={false}
-                        connectNulls
                       />
                       <Line
                         type="monotone"
@@ -1330,7 +1348,6 @@ export default function App() {
                         stroke="#f97316"
                         strokeWidth={2.2}
                         dot={false}
-                        connectNulls
                       />
                     </LineChart>
                   </ResponsiveContainer>
