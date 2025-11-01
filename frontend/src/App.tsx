@@ -1492,7 +1492,7 @@ export default function App() {
             </Polyline>
             <Marker position={[45.5188, 9.321]} icon={autogrillIcon}>
               <Tooltip direction="top" offset={[0, -12]} opacity={1} permanent>
-                Autogrill
+                Autogrill*
               </Tooltip>
             </Marker>
           </MapContainer>

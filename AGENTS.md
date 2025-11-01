@@ -7,6 +7,7 @@ Guidelines for humans or automation agents collaborating on the Tre Torri traffi
 - Store secrets (API keys, credentials) in secure vaults or CI secrets; never commit them.
 - Prefer JSON Lines (`data/traffic_samples.jsonl`) as the shared data exchange format.
 - Communicate via pull requests or issues before changing poll schedules or data schemas.
+- Autogrill reference icon now lives at 45.5188, 9.3210; simulation overlays (e.g., “Simulazione Bypass Per Leonardo Da Vinci”) and new school segments have been added—ensure future map enhancements account for these custom layers.
 
 ## Agent roles
 
