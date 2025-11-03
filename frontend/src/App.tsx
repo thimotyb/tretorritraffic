@@ -1100,17 +1100,31 @@ export default function App() {
       setChartRangeEndMs(null)
       return
     }
-    if (chartBasePoints.length === 0) {
+    if (chartAllPoints.length === 0) {
       setChartRangeStartMs(null)
       setChartRangeEndMs(null)
       return
     }
-    const earliest = chartBasePoints[0]?.timestamp ?? null
-    const latest = chartBasePoints[chartBasePoints.length - 1]?.timestamp ?? null
-    setChartRangeStartMs(earliest)
-    setChartRangeEndMs(latest)
-  }, [isChartOpen, chartSegmentId, chartBasePoints])
+    const earliest = chartAllPoints[0]?.timestamp ?? null
+    const latest = chartAllPoints[chartAllPoints.length - 1]?.timestamp ?? null
+    if (earliest == null || latest == null) {
+      setChartRangeStartMs(null)
+      setChartRangeEndMs(null)
+      return
+    }
 
+    let targetStart = rangeStartMs ?? earliest
+    let targetEnd = rangeEndMs ?? latest
+    if (targetStart < earliest) targetStart = earliest
+    if (targetEnd > latest) targetEnd = latest
+    if (targetStart >= targetEnd) {
+      targetStart = earliest
+      targetEnd = latest
+    }
+
+    setChartRangeStartMs(targetStart)
+    setChartRangeEndMs(targetEnd)
+  }, [isChartOpen, chartSegmentId, chartAllPoints, rangeStartMs, rangeEndMs])
   const chartData: ChartPoint[] = useMemo(() => {
     if (!chartSegmentId || !isChartOpen) return []
 
