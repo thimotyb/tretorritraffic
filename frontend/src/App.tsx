@@ -1034,7 +1034,7 @@ export default function App() {
     ? formatSnapshotRange(visibleSnapshotGroupsDesc[0].key)
     : 'n/a'
 
-  const chartBasePoints: ChartPoint[] = useMemo(() => {
+  const chartAllPoints: ChartPoint[] = useMemo(() => {
     if (!chartSegmentId || !isChartOpen) return []
 
     const points: ChartPoint[] = []
@@ -1043,17 +1043,15 @@ export default function App() {
       const bucketTime = new Date(group.key)
       const bucketMs = bucketTime.getTime()
       if (Number.isNaN(bucketMs)) continue
-      if (rangeStartMs != null && bucketMs < rangeStartMs) continue
-      if (rangeEndMs != null && bucketMs > rangeEndMs) continue
 
       let forwardSample: TrafficSample | undefined
       let reverseSample: TrafficSample | undefined
-      let allowedDirections: Array<'forward' | 'reverse'> | null = null
+      let directionsFromSamples: Array<'forward' | 'reverse'> | null = null
 
       for (const sample of group.samples) {
         if (sample.segmentId !== chartSegmentId) continue
-        if (allowedDirections == null && Array.isArray(sample.allowedDirections)) {
-          allowedDirections = sample.allowedDirections.filter((dir): dir is 'forward' | 'reverse' =>
+        if (directionsFromSamples == null && Array.isArray(sample.allowedDirections)) {
+          directionsFromSamples = sample.allowedDirections.filter((dir): dir is 'forward' | 'reverse' =>
             dir === 'forward' || dir === 'reverse'
           )
         }
@@ -1064,12 +1062,15 @@ export default function App() {
         }
       }
 
-      const fallbackAllowed =
-        (latestAllowedDirections.get(chartSegmentId) as Array<'forward' | 'reverse'> | undefined) ??
-        (CONFIG_ALLOWED_DIRECTION_OVERRIDES[chartSegmentId] as Array<'forward' | 'reverse'> | undefined) ??
-        (['forward', 'reverse'] as Array<'forward' | 'reverse'>)
+      const overrideAllowed = CONFIG_ALLOWED_DIRECTION_OVERRIDES[chartSegmentId]
+      const fallbackLatest = latestAllowedDirections.get(chartSegmentId) as
+        | Array<'forward' | 'reverse'>
+        | undefined
       const effectiveAllowed =
-        allowedDirections && allowedDirections.length > 0 ? allowedDirections : fallbackAllowed
+        overrideAllowed ??
+        directionsFromSamples ??
+        fallbackLatest ??
+        (['forward', 'reverse'] as Array<'forward' | 'reverse'>)
       const allowedSet = new Set<'forward' | 'reverse'>(effectiveAllowed)
 
       if (!forwardSample && !reverseSample) {
@@ -1088,14 +1089,10 @@ export default function App() {
       })
     }
 
-    const sorted = points.sort((a, b) => a.timestamp - b.timestamp)
+    return points.sort((a, b) => a.timestamp - b.timestamp)
+  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, latestAllowedDirections])
 
-    if (sorted.length <= 0) {
-      return []
-    }
-
-    return sorted
-  }, [chartSegmentId, isChartOpen, snapshotGroupsAsc, rangeStartMs, rangeEndMs, latestAllowedDirections])
+  const chartBasePoints = chartAllPoints
 
   useEffect(() => {
     if (!isChartOpen) {
@@ -1153,6 +1150,49 @@ export default function App() {
 
     return withBreaks
   }, [chartSegmentId, isChartOpen, chartBasePoints, chartRangeStartMs, chartRangeEndMs])
+
+  const availableChartDays = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; start: number }>()
+    for (const point of chartAllPoints) {
+      const date = new Date(point.timestamp)
+      if (Number.isNaN(date.getTime())) continue
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+      const key = new Date(startOfDay).toISOString().slice(0, 10)
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          start: startOfDay,
+        })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.start - b.start)
+  }, [chartAllPoints])
+
+  const activeChartDayKey = useMemo(() => {
+    if (chartRangeStartMs == null || chartRangeEndMs == null) return null
+    const startDate = new Date(chartRangeStartMs)
+    const endDate = new Date(chartRangeEndMs)
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null
+    const sameDay =
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getMonth() === endDate.getMonth() &&
+      startDate.getDate() === endDate.getDate() &&
+      chartRangeEndMs - chartRangeStartMs <= 24 * 60 * 60 * 1000
+    if (!sameDay) return null
+    const startOfDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime()
+    return new Date(startOfDay).toISOString().slice(0, 10)
+  }, [chartRangeStartMs, chartRangeEndMs])
+
+  const handleSelectChartDay = useCallback(
+    (day: { key: string; start: number }) => {
+      const start = day.start
+      const end = start + 24 * 60 * 60 * 1000 - 1
+      setChartRangeStartMs(start)
+      setChartRangeEndMs(end)
+    },
+    [],
+  )
 
   const chartDomain: [number, number] | ['auto', 'auto'] = useMemo(() => {
     if (!isChartOpen || !chartSegmentId || chartBasePoints.length === 0) {
@@ -1605,6 +1645,20 @@ export default function App() {
             <div className="modal-body">
               {chartData.length > 0 ? (
                 <>
+                  {availableChartDays.length > 0 && (
+                    <div className="chart-available-days" aria-label="Available days with data">
+                      {availableChartDays.map((day) => (
+                        <button
+                          type="button"
+                          key={day.key}
+                          className={`chart-day-button${activeChartDayKey === day.key ? ' is-active' : ''}`}
+                          onClick={() => handleSelectChartDay(day)}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="chart-range-controls">
                     <label htmlFor="chart-range-start">
                       Start
