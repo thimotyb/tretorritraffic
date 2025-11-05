@@ -74,6 +74,7 @@ Validates and prepares the collected dataset for analysis.
 3. Validate `weather` fields (code, condition, temperature) and flag missing snapshots when the poll succeeded.
 4. Flag suspect records and, if needed, remove or tag them for downstream consumers.
 5. Produce summary statistics per segment/day for dashboards, confirming enrichment fields (`lengthMeters`, `capacityVph`, `derivedFlowVph`, `volumeCapacityRatio`, `flowConfidence`) align with expectations.
+6. Maintain segment calibration notes: when field counts arrive, update each segment's `metadata.flowModel` `{ alpha, beta }` in `src/segments.js` so enrichment reflects locally tuned BPR parameters (defaults α = 0.15, β = 4 remain until overrides exist).
 
 **Failure recovery**
 - If the dataset is empty for expected intervals, notify Scheduler and Poller agents.

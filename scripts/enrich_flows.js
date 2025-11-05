@@ -8,8 +8,8 @@ const __dirname = path.dirname(__filename);
 const DATA_FILE = path.resolve(__dirname, '..', 'data', 'traffic_samples.jsonl');
 const BACKUP_FILE = path.resolve(__dirname, '..', 'data', 'traffic_samples.backup.jsonl');
 
-const BPR_ALPHA = 0.15;
-const BPR_BETA = 4;
+const BPR_DEFAULT_ALPHA = 0.15;
+const BPR_DEFAULT_BETA = 4;
 
 function toRadians(value) {
   return (value * Math.PI) / 180;
@@ -39,23 +39,58 @@ export function computeSegmentLengthMeters(endpoints) {
   return total;
 }
 
-const segmentMetadata = streetSegments.reduce((acc, segment) => {
-  const { id, endpoints, metadata = {} } = segment;
-  const lengthMeters = computeSegmentLengthMeters(endpoints);
-  const lanes = metadata.lanes ?? 1;
-  const laneCapacity = metadata.laneCapacityVph ?? 900;
-  const capacityVph = lanes * laneCapacity;
-  return acc.set(id, {
-    id,
-    lengthMeters,
-    lanes,
-    capacityVph,
-    speedLimitKph: metadata.speedLimitKph ?? null,
-  });
-}, new Map());
+function normaliseFlowModelParameters({ alpha, beta } = {}) {
+  const normalisedAlpha = typeof alpha === 'number' && Number.isFinite(alpha) && alpha > 0
+    ? alpha
+    : null;
+  const normalisedBeta = typeof beta === 'number' && Number.isFinite(beta) && beta > 0
+    ? beta
+    : null;
+  return {
+    alpha: normalisedAlpha ?? BPR_DEFAULT_ALPHA,
+    beta: normalisedBeta ?? BPR_DEFAULT_BETA,
+  };
+}
+
+function resolveSegmentMetadata() {
+  return streetSegments.reduce((acc, segment) => {
+    const { id, endpoints, metadata = {} } = segment;
+    const lengthMeters = computeSegmentLengthMeters(endpoints);
+    const lanes = metadata.lanes ?? 1;
+    const laneCapacity = metadata.laneCapacityVph ?? 900;
+    const capacityVph = lanes * laneCapacity;
+    const flowModel = normaliseFlowModelParameters(
+      metadata.flowModel ?? {
+        alpha: metadata.bprAlpha,
+        beta: metadata.bprBeta,
+      },
+    );
+    acc.set(id, {
+      id,
+      lengthMeters,
+      lanes,
+      capacityVph,
+      speedLimitKph: metadata.speedLimitKph ?? null,
+      flowModel,
+    });
+    return acc;
+  }, new Map());
+}
+
+let segmentMetadataCache = resolveSegmentMetadata();
+
+export function refreshSegmentMetadata() {
+  segmentMetadataCache = resolveSegmentMetadata();
+}
+
+function getSegmentMetadataMap() {
+  return segmentMetadataCache;
+}
 
 export function deriveFlowMetrics(sample) {
-  const meta = segmentMetadata.get(sample.segmentId);
+  const meta = getSegmentMetadataMap().get(sample.segmentId);
+  const alpha = meta?.flowModel?.alpha ?? BPR_DEFAULT_ALPHA;
+  const beta = meta?.flowModel?.beta ?? BPR_DEFAULT_BETA;
   if (!meta) {
     return {
       capacityVph: null,
@@ -64,6 +99,8 @@ export function deriveFlowMetrics(sample) {
       volumeCapacityRatio: null,
       derivedFlowVph: null,
       flowConfidence: 'low',
+      alpha,
+      beta,
     };
   }
 
@@ -91,6 +128,8 @@ export function deriveFlowMetrics(sample) {
       volumeCapacityRatio: null,
       derivedFlowVph: null,
       flowConfidence: 'low',
+      alpha,
+      beta,
     };
   }
 
@@ -98,8 +137,8 @@ export function deriveFlowMetrics(sample) {
   const timeRatio = duration / staticDuration;
   let volumeCapacityRatio = 0;
   if (timeRatio > 1) {
-    const adjusted = (timeRatio - 1) / BPR_ALPHA;
-    volumeCapacityRatio = Math.pow(Math.max(adjusted, 0), 1 / BPR_BETA);
+    const adjusted = (timeRatio - 1) / alpha;
+    volumeCapacityRatio = Math.pow(Math.max(adjusted, 0), 1 / beta);
   }
 
   // Guard against extreme results
@@ -133,6 +172,8 @@ export function deriveFlowMetrics(sample) {
     volumeCapacityRatio,
     derivedFlowVph,
     flowConfidence,
+    alpha,
+    beta,
   };
 }
 
@@ -153,8 +194,8 @@ async function enrichSamples() {
         derivedFlowVph: metrics.derivedFlowVph,
         flowConfidence: metrics.flowConfidence,
         flowEstimationModel: {
-          alpha: BPR_ALPHA,
-          beta: BPR_BETA,
+          alpha: metrics.alpha ?? BPR_DEFAULT_ALPHA,
+          beta: metrics.beta ?? BPR_DEFAULT_BETA,
           source: 'BPR',
           notes: 'Derived from travel-time ratio using BPR function and assumed lane capacity.',
         },
