@@ -83,7 +83,7 @@ The script reads `data/traffic_samples.jsonl`, computes the metrics using the BP
 
 A Jupyter notebook (`notebooks/bpr_calibration.ipynb`) streamlines the calibration workflow when you have observed vehicle counts (e.g., peak-hour manual tallies or tube counters):
 
-1. Save your counts to `data/field_counts.csv` (or update the path in the notebook). Include `segmentId`, `observationStart`, `observationEnd`, `observedVehicles`, and optionally a prior `capacityGuessVph`. A starter template lives at `data/field_counts.sample.csv`—copy and edit it with your measurements.
+1. Save your counts to `data/field_counts.csv` (or update the path in the notebook). Include `segmentId`, `direction` (`forward`/`reverse`), `observationStart`, `observationEnd`, `observedVehicles`, and optionally a prior `capacityGuessVph`. A starter template lives at `data/field_counts.sample.csv`—copy and edit it with your measurements.
 2. Open the notebook, install the Python dependencies if prompted, and run the cells to align counts with the JSONL samples.
 3. Review the fitted coefficients (`alpha`, `beta`, `capacityVph`) and diagnostics (`rmse`, `mae`).
 4. Copy the recommended `alpha`/`beta` values into each segment’s `metadata.flowModel` and re-run `npm run enrich` so the dataset reflects the calibrated parameters.
