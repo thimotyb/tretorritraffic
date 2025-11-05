@@ -79,6 +79,17 @@ The script reads `data/traffic_samples.jsonl`, computes the metrics using the BP
 > ```
 > When the block is omitted, the default α/β values are applied.
 
+### Calibrating BPR parameters with field counts
+
+A Jupyter notebook (`notebooks/bpr_calibration.ipynb`) streamlines the calibration workflow when you have observed vehicle counts (e.g., peak-hour manual tallies or tube counters):
+
+1. Save your counts to `data/field_counts.csv` (or update the path in the notebook). Include `segmentId`, `observationStart`, `observationEnd`, `observedVehicles`, and optionally a prior `capacityGuessVph`. A starter template lives at `data/field_counts.sample.csv`—copy and edit it with your measurements.
+2. Open the notebook, install the Python dependencies if prompted, and run the cells to align counts with the JSONL samples.
+3. Review the fitted coefficients (`alpha`, `beta`, `capacityVph`) and diagnostics (`rmse`, `mae`).
+4. Copy the recommended `alpha`/`beta` values into each segment’s `metadata.flowModel` and re-run `npm run enrich` so the dataset reflects the calibrated parameters.
+
+The notebook also exports `data/calibrated_flow_models.csv` to keep an auditable log of the fitted values.
+
 The default configuration monitors the core Tre Torri block plus nearby approaches along Via Don Luigi Sturzo, Via Sant'Ambrogio, Via Don Lorenzo Milani, Via Pontida, Via Filippo Corridoni, Via Don Primo Mazzolari, Via Leonardo da Vinci (full length), Via Milano, Via Melghera, and Via Padre Kolbe.
 
 Console output provides quick feedback on durations and delays or reports API errors if encountered.
