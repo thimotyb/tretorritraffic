@@ -75,6 +75,7 @@ interface WeatherSnapshot {
 const MAP_CENTER: LatLngExpression = [45.5189, 9.3247]
 const MAP_ZOOM = 16
 const SNAPSHOT_WINDOW_MINUTES = 5
+const CHART_GAP_THRESHOLD_WINDOWS = 6
 const BPR_ALPHA = 0.15
 const BPR_BETA = 4
 const DATA_URL = `${import.meta.env.BASE_URL}traffic_samples.jsonl`
@@ -1138,7 +1139,7 @@ export default function App() {
       return filtered
     }
 
-    const gapThresholdMs = SNAPSHOT_WINDOW_MINUTES * 2 * 60 * 1000
+    const gapThresholdMs = SNAPSHOT_WINDOW_MINUTES * CHART_GAP_THRESHOLD_WINDOWS * 60 * 1000
     const withBreaks: ChartPoint[] = []
 
     for (let i = 0; i < filtered.length; i += 1) {
