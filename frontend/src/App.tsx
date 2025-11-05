@@ -1934,6 +1934,17 @@ export default function App() {
                       model against the measured flows.
                     </li>
                     <li>
+                      <a
+                        href="https://github.com/thimotyb/tretorritraffic/blob/master/notebooks/bpr_calibration.ipynb"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Use the BPR calibration notebook
+                      </a>{' '}
+                      (plus `data/field_counts.sample.csv`) to fit segment-specific α/β values when peak-hour
+                      counts are available.
+                    </li>
+                    <li>
                       Capacity defaults to <code>lanes × laneCapacityVph</code>; lane capacity comes from
                       `segments.js` (e.g., 900 veh/h for local lanes).
                     </li>
